@@ -187,9 +187,13 @@ const App: React.FC = () => {
         md:relative md:translate-x-0
       `}>
         <div className="p-6 border-b border-slate-800 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center">
-                  <span className="font-bold text-lg">Z</span>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center overflow-hidden">
+                  <img 
+                    src="https://www.inrap.fr/sites/inrap.fr/files/styles/article/public/thumbnails/image/logo-theleme2.jpg?itok=4U43jUPR" 
+                    alt="Logo" 
+                    className="w-full h-full object-cover"
+                  />
               </div>
               <span className="font-bold text-lg tracking-tight">ZenSpace</span>
             </div>
