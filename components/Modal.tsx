@@ -28,21 +28,22 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm transition-opacity">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-md transition-all duration-300">
       <div
         ref={modalRef}
-        className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200"
+        className="bg-white rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] w-full max-w-md overflow-hidden transform transition-all animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300 ring-1 ring-slate-900/5 flex flex-col max-h-[90vh]"
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h3 className="text-lg font-semibold text-slate-800">{title}</h3>
+        <div className="flex items-center justify-between px-6 py-5 bg-white z-10">
+          <h3 className="text-xl font-bold text-slate-800 tracking-tight">{title}</h3>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors"
+            className="p-2 -mr-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all"
+            aria-label="Fermer"
           >
             <X size={20} />
           </button>
         </div>
-        <div className="p-6">
+        <div className="px-6 pb-6 overflow-y-auto flex-1 custom-scrollbar">
           {children}
         </div>
       </div>
