@@ -5,6 +5,7 @@ import { PlanningGrid } from './components/PlanningGrid';
 import { Dashboard } from './components/Dashboard';
 import { Modal } from './components/Modal';
 import { BookingForm } from './components/BookingForm';
+import { BookingPreview } from './components/BookingPreview';
 import { Button } from './components/Button';
 import { SpaceManager } from './components/SpaceManager';
 import { Login } from './components/Login';
@@ -36,6 +37,7 @@ const App: React.FC = () => {
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'preview'>('create');
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [initialFormState, setInitialFormState] = useState<any>(null);
 
@@ -127,13 +129,32 @@ const App: React.FC = () => {
   const handleSlotClick = (spaceId: string, time: string) => {
     setEditingBooking(null);
     setInitialFormState({ spaceId, startTime: time, durationMinutes: 60, date: selectedDate, pax: 1 });
+    setModalMode('create');
     setIsModalOpen(true);
   };
 
   const handleBookingClick = (booking: Booking) => {
     setEditingBooking(booking);
     setInitialFormState(booking);
+    setModalMode('preview');
     setIsModalOpen(true);
+  };
+
+  const handleQuickUpdate = async (updates: Partial<Booking>) => {
+    if (!editingBooking) return;
+    const updatedBooking = { ...editingBooking, ...updates };
+    
+    // Optimistic Update
+    setBookings(prev => prev.map(b => b.id === editingBooking.id ? updatedBooking : b));
+    setEditingBooking(updatedBooking);
+
+    // Prepare DB object (snake_case)
+    const dbUpdates: any = {};
+    if (updates.status !== undefined) dbUpdates.status = updates.status;
+    if (updates.isPaid !== undefined) dbUpdates.is_paid = updates.isPaid;
+
+    await supabase.from('bookings').update(dbUpdates).eq('id', editingBooking.id);
+    await logAction('UPDATE', 'BOOKING', editingBooking.id, `Mise à jour rapide: ${updatedBooking.customerName}`);
   };
 
   const handleFormSubmit = async (data: any) => {
@@ -394,7 +415,7 @@ const App: React.FC = () => {
                 )}
             </div>
             {currentView === View.CALENDAR && (
-                <Button onClick={() => { setEditingBooking(null); setInitialFormState({date: selectedDate, startTime: '09:00', durationMinutes: 60, pax: 1}); setIsModalOpen(true); }} className="whitespace-nowrap">
+                <Button onClick={() => { setEditingBooking(null); setInitialFormState({date: selectedDate, startTime: '09:00', durationMinutes: 60, pax: 1}); setModalMode('create'); setIsModalOpen(true); }} className="whitespace-nowrap">
                     <Plus size={18} className="md:mr-2" /> 
                     <span className="hidden md:inline">Réserver</span>
                 </Button>
@@ -448,16 +469,28 @@ const App: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingBooking ? "Modifier Réservation" : "Nouvelle Réservation"}
+        title={modalMode === 'preview' ? "Détails de la réservation" : editingBooking ? "Modifier Réservation" : "Nouvelle Réservation"}
       >
-        <BookingForm
-            spaces={spaces}
-            onSubmit={handleFormSubmit}
-            onCancel={() => setIsModalOpen(false)}
-            initialData={initialFormState}
-            currentBookings={bookings}
-            onDelete={editingBooking ? () => handleDeleteBooking(editingBooking.id) : undefined}
-        />
+        {modalMode === 'preview' && editingBooking ? (
+            <BookingPreview
+                booking={editingBooking}
+                space={spaces.find(s => s.id === editingBooking.spaceId)}
+                onEdit={() => setModalMode('edit')}
+                onClose={() => setIsModalOpen(false)}
+                onUpdateStatus={(status) => handleQuickUpdate({ status })}
+                onTogglePayment={() => handleQuickUpdate({ isPaid: !editingBooking.isPaid })}
+                onDelete={() => handleDeleteBooking(editingBooking.id)}
+            />
+        ) : (
+            <BookingForm
+                spaces={spaces}
+                onSubmit={handleFormSubmit}
+                onCancel={() => setIsModalOpen(false)}
+                initialData={initialFormState}
+                currentBookings={bookings}
+                onDelete={editingBooking ? () => handleDeleteBooking(editingBooking.id) : undefined}
+            />
+        )}
       </Modal>
     </div>
   );

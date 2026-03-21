@@ -332,12 +332,26 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
                                             onBookingClick(booking);
                                         }}
                                     >
-                                        <div className="flex items-center justify-between gap-2">
-                                            <span className={`font-bold text-xs truncate ${textClass} ${booking.status === BookingStatus.NO_SHOW ? 'line-through opacity-70' : ''}`}>
-                                                {booking.serviceName}
-                                                {booking.roomNumber && <span className="ml-1 text-stone-400 font-normal">({booking.roomNumber})</span>}
-                                            </span>
-                                            <div className="flex items-center gap-1">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="flex flex-col min-w-0">
+                                                <span className={`font-bold text-xs truncate ${textClass} ${booking.status === BookingStatus.NO_SHOW ? 'line-through opacity-70' : ''}`}>
+                                                    {booking.customerName}
+                                                    {booking.roomNumber && <span className="ml-1 text-stone-400 font-normal">({booking.roomNumber})</span>}
+                                                </span>
+                                                {/* Hide details if slot is too small vertically */}
+                                                {heightPercent > 30 && width > 60 && (
+                                                    <div className="text-[10px] text-stone-500 truncate mt-0.5 flex items-center gap-1">
+                                                        {booking.serviceName && booking.serviceName !== 'Réservation' && (
+                                                            <>
+                                                                <span className="font-medium truncate">{booking.serviceName}</span>
+                                                                <span className="text-stone-300 flex-shrink-0">•</span>
+                                                            </>
+                                                        )}
+                                                        <span className="flex-shrink-0">{booking.startTime} - {minutesToTime(timeToMinutes(booking.startTime) + booking.durationMinutes)}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-1 flex-shrink-0 pt-0.5">
                                                 {booking.isPaid ? (
                                                     <CheckCircle2 size={10} className="text-emerald-500" title="Réglé" />
                                                 ) : (
@@ -356,14 +370,6 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
                                                 )}
                                             </div>
                                         </div>
-                                        {/* Hide details if slot is too small vertically */}
-                                        {heightPercent > 30 && width > 60 && (
-                                            <div className="text-[10px] text-stone-500 truncate mt-0.5 flex items-center gap-1">
-                                                <span className="font-medium">{booking.customerName}</span>
-                                                <span className="text-stone-300">•</span>
-                                                <span>{booking.startTime} - {minutesToTime(timeToMinutes(booking.startTime) + booking.durationMinutes)}</span>
-                                            </div>
-                                        )}
                                         
                                         {/* Hover Tooltip (Simple browser title for now, or could be a custom component) */}
                                         <div className="hidden group-hover/card:flex absolute inset-0 bg-white/50 backdrop-blur-[1px] items-center justify-center font-semibold text-xs text-stone-800 opacity-0 group-hover/card:opacity-100 transition-opacity">

@@ -234,39 +234,8 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
         className="flex flex-col h-full"
         autoComplete="off"
     >
-      {/* Quick Actions Header (Only when Editing) */}
-      {isEditing && (
-          <div className="mb-6 mx-1 p-2 bg-white rounded-xl border border-stone-200 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] flex items-center justify-between gap-3 animate-in slide-in-from-top-2">
-               <div className="flex gap-2">
-                   <button
-                       type="button"
-                       onClick={() => setStatus(BookingStatus.CHECKED_IN)}
-                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${formData.status === BookingStatus.CHECKED_IN ? 'bg-sky-100 text-sky-700 border border-sky-200 shadow-sm' : 'bg-stone-50 text-stone-600 border border-stone-200 hover:bg-white hover:shadow-sm'}`}
-                   >
-                       <UserCheck size={14} /> Présent
-                   </button>
-                   <button
-                       type="button"
-                       onClick={() => setStatus(BookingStatus.NO_SHOW)}
-                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${formData.status === BookingStatus.NO_SHOW ? 'bg-zinc-100 text-zinc-700 border border-zinc-200 shadow-sm' : 'bg-stone-50 text-stone-600 border border-stone-200 hover:bg-white hover:shadow-sm'}`}
-                   >
-                       <UserX size={14} /> No-Show
-                   </button>
-               </div>
-               
-               <button
-                    type="button"
-                    onClick={togglePayment}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border shadow-sm ${formData.isPaid ? 'bg-brand-50 border-brand-200 text-brand-900' : 'bg-white border-orange-200 text-orange-600 hover:bg-orange-50'}`}
-               >
-                   {formData.isPaid ? <Check size={14} /> : <CreditCard size={14} />}
-                   {formData.isPaid ? 'Réglé' : 'À régler'}
-               </button>
-          </div>
-      )}
-
       {/* Compact Progress Bar - Added pt-5 to prevent top clipping */}
-      <div className={`${isEditing ? 'mb-6' : 'mb-8 pt-5'} px-4`}>
+      <div className="mb-8 pt-5 px-4">
           <div className="flex items-center justify-between relative">
               <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-full h-0.5 bg-stone-100 -z-10 rounded-full"></div>
               <div 
