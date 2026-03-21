@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Space, Booking, BookingStatus } from '../types';
 import { OPENING_HOUR, CLOSING_HOUR, PIXELS_PER_MINUTE } from '../constants';
-import { Plus, Users, Clock, Info } from 'lucide-react';
+import { Plus, Users, Clock, Info, CheckCircle2, XCircle, UserCheck, UserX } from 'lucide-react';
 
 interface PlanningGridProps {
   spaces: Space[];
@@ -68,19 +68,6 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
     timeMarkers.push(h);
   }
 
-  const handleGridClick = (e: React.MouseEvent, spaceId: string) => {
-    if ((e.target as HTMLElement).closest('.booking-card')) return;
-
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const clickX = e.clientX - rect.left + (scrollRef.current?.scrollLeft || 0);
-    
-    const rawMins = clickX / PIXELS_PER_MINUTE;
-    const snappedMins = Math.round(rawMins / 15) * 15;
-    const actualMins = (OPENING_HOUR * 60) + snappedMins;
-    
-    onSlotClick(spaceId, minutesToTime(actualMins));
-  };
-
   return (
     <div className="flex flex-col h-full bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
       {/* Sticky Header */}
@@ -114,8 +101,8 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
             {/* Global Current Time Line (Overlay) */}
             {currentTimePos !== null && (
                 <div 
-                    className="absolute top-0 bottom-0 z-40 border-l-2 border-red-500 pointer-events-none"
-                    style={{ left: `${256 + currentTimePos}px` /* 256px is roughly w-64 */ }} 
+                    className="absolute top-0 bottom-0 z-40 border-l-2 border-red-500 pointer-events-none ml-48 md:ml-64"
+                    style={{ left: `${currentTimePos}px` }} 
                 >
                     <div className="absolute -top-1.5 -left-[5px] w-2.5 h-2.5 bg-red-500 rounded-full shadow-sm" />
                     <div className="absolute top-2 left-1 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm opacity-80">
@@ -184,8 +171,24 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
                     <div 
                         className="relative border-r border-stone-100 flex-1 bg-white"
                         style={{ width: `${gridWidth}px` }}
-                        onClick={(e) => handleGridClick(e, space.id)}
                     >
+                        {/* Hoverable Empty Slots */}
+                        <div className="absolute inset-0 flex z-10">
+                            {Array.from({ length: (CLOSING_HOUR - OPENING_HOUR) * 4 }).map((_, i) => (
+                                <div 
+                                    key={`slot-${i}`}
+                                    className="h-full flex-1 border-r border-transparent hover:bg-brand-50/50 hover:border-brand-200 transition-colors cursor-pointer group/slot flex items-center justify-center"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const actualMins = (OPENING_HOUR * 60) + (i * 15);
+                                        onSlotClick(space.id, minutesToTime(actualMins));
+                                    }}
+                                >
+                                    <Plus className="opacity-0 group-hover/slot:opacity-100 text-brand-400" size={20} />
+                                </div>
+                            ))}
+                        </div>
+
                         {/* Vertical Guidelines */}
                         {timeMarkers.map(hour => (
                             <div 
@@ -265,11 +268,24 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
                                     >
                                         <div className="flex items-center justify-between gap-2">
                                             <span className={`font-bold text-xs truncate ${textClass} ${booking.status === BookingStatus.NO_SHOW ? 'line-through opacity-70' : ''}`}>{booking.serviceName}</span>
-                                            {booking.pax > 1 && (
-                                                <div className="flex items-center bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded-full text-[9px] flex-shrink-0">
-                                                    <Users size={8} className="mr-0.5" /> {booking.pax}
-                                                </div>
-                                            )}
+                                            <div className="flex items-center gap-1">
+                                                {booking.isPaid ? (
+                                                    <CheckCircle2 size={10} className="text-emerald-500" title="Réglé" />
+                                                ) : (
+                                                    <XCircle size={10} className="text-red-400" title="Non réglé" />
+                                                )}
+                                                {booking.status === BookingStatus.CHECKED_IN && (
+                                                    <UserCheck size={10} className="text-blue-500" title="Présent" />
+                                                )}
+                                                {booking.status === BookingStatus.NO_SHOW && (
+                                                    <UserX size={10} className="text-stone-400" title="No-show" />
+                                                )}
+                                                {booking.pax > 1 && (
+                                                    <div className="flex items-center bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded-full text-[9px] flex-shrink-0 ml-0.5">
+                                                        <Users size={8} className="mr-0.5" /> {booking.pax}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                         {/* Hide details if slot is too small vertically */}
                                         {heightPercent > 30 && width > 60 && (

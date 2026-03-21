@@ -272,7 +272,7 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        <div className="flex-1 overflow-auto p-4 md:p-6 bg-stone-50/50 relative">
+        <div className="flex-1 overflow-hidden bg-stone-50/50 relative flex flex-col">
           {isLoadingData ? (
              <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-sm z-30">
                  <Loader2 className="animate-spin text-brand-900 w-10 h-10" />
@@ -280,23 +280,29 @@ const App: React.FC = () => {
           ) : (
             <>
                 {currentView === View.CALENDAR && (
-                    <PlanningGrid 
-                        spaces={spaces} 
-                        bookings={bookings} 
-                        onSlotClick={handleSlotClick} 
-                        onBookingClick={handleBookingClick}
-                    />
+                    <div className="flex-1 p-2 md:p-6 overflow-hidden">
+                        <PlanningGrid 
+                            spaces={spaces} 
+                            bookings={bookings} 
+                            onSlotClick={handleSlotClick} 
+                            onBookingClick={handleBookingClick}
+                        />
+                    </div>
                 )}
                 {currentView === View.DASHBOARD && (
-                    <Dashboard bookings={bookings} />
+                    <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
+                        <Dashboard bookings={bookings} />
+                    </div>
                 )}
                 {currentView === View.SETTINGS && (
-                    <SpaceManager 
-                        spaces={spaces} 
-                        onAddSpace={handleAddSpace}
-                        onUpdateSpace={handleUpdateSpace}
-                        onDeleteSpace={handleDeleteSpace}
-                    />
+                    <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
+                        <SpaceManager 
+                            spaces={spaces} 
+                            onAddSpace={handleAddSpace}
+                            onUpdateSpace={handleUpdateSpace}
+                            onDeleteSpace={handleDeleteSpace}
+                        />
+                    </div>
                 )}
             </>
           )}
