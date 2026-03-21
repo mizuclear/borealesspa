@@ -63,7 +63,8 @@ const App: React.FC = () => {
             durationMinutes: b.duration_minutes,
             breakMinutes: b.break_minutes,
             pax: b.pax || 1,
-            status: b.status
+            status: b.status,
+            isPaid: b.is_paid || false
         })) || [];
 
         setSpaces(mappedSpaces);
@@ -110,7 +111,8 @@ const App: React.FC = () => {
         duration_minutes: data.durationMinutes,
         break_minutes: data.breakMinutes,
         pax: data.pax,
-        status: data.status
+        status: data.status,
+        is_paid: data.isPaid
     };
 
     const isSameDate = data.date === selectedDate;
@@ -172,7 +174,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-800 font-sans overflow-hidden">
+    <div className="flex h-screen bg-stone-50 text-stone-800 font-sans overflow-hidden">
       
       {isSidebarOpen && (
         <div 
@@ -182,22 +184,22 @@ const App: React.FC = () => {
       )}
 
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white flex flex-col shadow-xl transition-transform duration-300 ease-in-out
+        fixed inset-y-0 left-0 z-50 w-64 bg-stone-900 text-white flex flex-col shadow-xl transition-transform duration-300 ease-in-out
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         md:relative md:translate-x-0
       `}>
-        <div className="p-6 border-b border-slate-800 flex items-center justify-between">
+        <div className="p-6 border-b border-stone-800 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center overflow-hidden">
                   <img 
-                    src="https://www.inrap.fr/sites/inrap.fr/files/styles/article/public/thumbnails/image/logo-theleme2.jpg?itok=4U43jUPR" 
-                    alt="Logo" 
+                    src="https://i.ibb.co/HTQmyZX1/BRS-Infos-pratiques-1.png" 
+                    alt="Logo Les Boréales" 
                     className="w-full h-full object-cover"
                   />
               </div>
-              <span className="font-bold text-lg tracking-tight">ZenSpace</span>
+              <span className="font-serif font-bold text-xl tracking-tight">Les Boréales</span>
             </div>
-            <button onClick={toggleSidebar} className="md:hidden text-slate-400 hover:text-white">
+            <button onClick={toggleSidebar} className="md:hidden text-stone-400 hover:text-white">
               <X size={20} />
             </button>
         </div>
@@ -205,7 +207,7 @@ const App: React.FC = () => {
         <nav className="flex-1 p-4 space-y-2">
           <button 
             onClick={() => { setCurrentView(View.CALENDAR); setIsSidebarOpen(false); }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${currentView === View.CALENDAR ? 'bg-teal-600 text-white shadow-lg shadow-teal-900/50' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${currentView === View.CALENDAR ? 'bg-brand-900 text-white shadow-lg shadow-brand-900/50' : 'text-stone-400 hover:bg-stone-800 hover:text-white'}`}
           >
             <Calendar size={20} />
             <span className="font-medium">Planning</span>
@@ -213,7 +215,7 @@ const App: React.FC = () => {
           
           <button 
              onClick={() => { setCurrentView(View.DASHBOARD); setIsSidebarOpen(false); }}
-             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${currentView === View.DASHBOARD ? 'bg-teal-600 text-white shadow-lg shadow-teal-900/50' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${currentView === View.DASHBOARD ? 'bg-brand-900 text-white shadow-lg shadow-brand-900/50' : 'text-stone-400 hover:bg-stone-800 hover:text-white'}`}
           >
             <LayoutDashboard size={20} />
             <span className="font-medium">Tableau de bord</span>
@@ -221,7 +223,7 @@ const App: React.FC = () => {
 
           <button 
              onClick={() => { setCurrentView(View.SETTINGS); setIsSidebarOpen(false); }}
-             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${currentView === View.SETTINGS ? 'bg-teal-600 text-white shadow-lg shadow-teal-900/50' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${currentView === View.SETTINGS ? 'bg-brand-900 text-white shadow-lg shadow-brand-900/50' : 'text-stone-400 hover:bg-stone-800 hover:text-white'}`}
           >
             <Settings size={20} />
             <span className="font-medium">Paramètres</span>
@@ -230,27 +232,27 @@ const App: React.FC = () => {
       </aside>
 
       <main className="flex-1 flex flex-col relative overflow-hidden w-full">
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 flex-shrink-0 z-20">
+        <header className="h-16 bg-white border-b border-stone-200 flex items-center justify-between px-4 md:px-6 flex-shrink-0 z-20">
           <div className="flex items-center gap-3">
-            <button onClick={toggleSidebar} className="md:hidden text-slate-500 hover:text-slate-700">
+            <button onClick={toggleSidebar} className="md:hidden text-stone-500 hover:text-stone-700">
               <Menu size={24} />
             </button>
             <div className="flex flex-col md:flex-row md:items-center md:gap-4">
-                 <h2 className="text-lg font-bold text-slate-800 hidden md:block">
+                 <h2 className="text-lg font-bold text-stone-800 hidden md:block">
                     {currentView === View.CALENDAR && 'Planning'}
                     {currentView === View.DASHBOARD && 'Vue d\'ensemble'}
                     {currentView === View.SETTINGS && 'Configuration'}
                 </h2>
                 {currentView !== View.SETTINGS && (
-                    <div className="flex items-center bg-slate-100 rounded-lg p-1">
-                        <button onClick={() => changeDate(-1)} className="p-1 hover:bg-white rounded-md text-slate-500 transition-all"><ChevronLeft size={16}/></button>
+                    <div className="flex items-center bg-stone-100 rounded-lg p-1">
+                        <button onClick={() => changeDate(-1)} className="p-1 hover:bg-white rounded-md text-stone-500 transition-all"><ChevronLeft size={16}/></button>
                         <input 
                             type="date" 
                             value={selectedDate} 
                             onChange={(e) => setSelectedDate(e.target.value)}
-                            className="bg-transparent border-none text-xs md:text-sm font-medium text-slate-700 px-2 outline-none w-28 md:w-auto"
+                            className="bg-transparent border-none text-xs md:text-sm font-medium text-stone-700 px-2 outline-none w-28 md:w-auto"
                         />
-                        <button onClick={() => changeDate(1)} className="p-1 hover:bg-white rounded-md text-slate-500 transition-all"><ChevronRight size={16}/></button>
+                        <button onClick={() => changeDate(1)} className="p-1 hover:bg-white rounded-md text-stone-500 transition-all"><ChevronRight size={16}/></button>
                     </div>
                 )}
             </div>
@@ -258,8 +260,8 @@ const App: React.FC = () => {
           
           <div className="flex items-center gap-2 md:gap-4">
             <div className="relative hidden lg:block">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
-                <input type="text" placeholder="Rechercher..." className="pl-10 pr-4 py-2 bg-slate-100 rounded-full text-sm border-transparent focus:bg-white focus:ring-2 focus:ring-teal-500 transition-all outline-none w-48 lg:w-64" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-400" size={18} />
+                <input type="text" placeholder="Rechercher..." className="pl-10 pr-4 py-2 bg-stone-100 rounded-full text-sm border-transparent focus:bg-white focus:ring-2 focus:ring-brand-900 transition-all outline-none w-48 lg:w-64" />
             </div>
             {currentView === View.CALENDAR && (
                 <Button onClick={() => { setEditingBooking(null); setInitialFormState({date: selectedDate, startTime: '09:00', durationMinutes: 60, pax: 1}); setIsModalOpen(true); }} className="whitespace-nowrap">
@@ -270,10 +272,10 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        <div className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50/50 relative">
+        <div className="flex-1 overflow-auto p-4 md:p-6 bg-stone-50/50 relative">
           {isLoadingData ? (
              <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-sm z-30">
-                 <Loader2 className="animate-spin text-teal-600 w-10 h-10" />
+                 <Loader2 className="animate-spin text-brand-900 w-10 h-10" />
              </div>
           ) : (
             <>

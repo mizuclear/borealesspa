@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BookingStatus, Space, Booking } from '../types';
 import { Button } from './Button';
-import { Clock, Calendar as CalendarIcon, AlertTriangle, Users, Info, Trash2, ChevronRight, ChevronLeft, Check, User, MapPin, ArrowRight } from 'lucide-react';
+import { Calendar as CalendarIcon, AlertTriangle, Users, Trash2, ChevronRight, Check, User, MapPin, ArrowRight, CreditCard, UserCheck, UserX } from 'lucide-react';
 
 interface BookingFormProps {
   spaces: Space[];
@@ -18,6 +18,8 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
   [BookingStatus.CANCELED]: 'Annulé',
   [BookingStatus.MAINTENANCE]: 'Maintenance',
   [BookingStatus.BLOCKED]: 'Bloqué',
+  [BookingStatus.CHECKED_IN]: 'Présent',
+  [BookingStatus.NO_SHOW]: 'No-Show'
 };
 
 // Helper functions for time conversion
@@ -41,6 +43,7 @@ const STEPS = [
 
 export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCancel, initialData, currentBookings, onDelete }) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const isEditing = !!initialData?.id;
   
   // Initialize form state
   const [formData, setFormData] = useState({
@@ -54,6 +57,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
     breakMinutes: initialData?.breakMinutes || 0,
     pax: initialData?.pax || 1,
     status: initialData?.status || BookingStatus.CONFIRMED,
+    isPaid: initialData?.isPaid || false,
   });
 
   // Calculate initial EndTime if not present or on load
@@ -89,7 +93,8 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
       const startMins = timeToMins(formData.startTime);
       
       let duration = endMins - startMins;
-      if (duration < 15) duration = 15; // Minimum 15 mins
+      // Force minimum duration of 15 mins to avoid issues
+      if (duration < 15) duration = 15; 
 
       setFormData(prev => ({
           ...prev,
@@ -115,9 +120,21 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const togglePayment = () => {
+      setFormData(prev => ({ ...prev, isPaid: !prev.isPaid }));
+  };
+
+  const setStatus = (status: BookingStatus) => {
+      setFormData(prev => ({ ...prev, status }));
+  };
+
   // --- Capacity Calculation ---
   useEffect(() => {
-    calculateCapacity();
+    try {
+        calculateCapacity();
+    } catch (e) {
+        console.error("Error calculating capacity", e);
+    }
   }, [formData.spaceId, formData.date, formData.startTime, formData.durationMinutes, formData.pax]);
 
   const calculateCapacity = () => {
@@ -152,10 +169,11 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
       });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Manual Trigger for Submission to prevent ghost submissions
+  const triggerSubmit = () => {
     onSubmit({
         ...formData,
+        serviceName: formData.serviceName || 'Réservation', // Default if empty
         durationMinutes: Number(formData.durationMinutes),
         breakMinutes: Number(formData.breakMinutes),
         pax: Number(formData.pax)
@@ -170,7 +188,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
 
   const nextStep = () => {
       if (currentStep === 1) {
-          if (!formData.customerName || !formData.serviceName) return;
+          if (!formData.customerName) return; // Only customerName is required
       }
       if (currentStep === 2) {
           if (!formData.spaceId) {
@@ -185,17 +203,21 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
       setCurrentStep(p => Math.max(1, p - 1));
   };
 
-  // Prevent submit on Enter key unless on last step
+  // Robust Enter key handling
   const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && currentStep < STEPS.length) {
-          e.preventDefault();
-          nextStep();
+      if (e.key === 'Enter') {
+          e.preventDefault(); // Always prevent default form submit
+          // Only allow navigation on earlier steps
+          if (currentStep < STEPS.length) {
+             nextStep();
+          }
+          // On last step, do nothing. User must click confirm.
       }
   };
 
   if (spaces.length === 0) {
       return (
-          <div className="text-center py-8 text-slate-500">
+          <div className="text-center py-8 text-stone-500">
               <p>Aucun espace configuré.</p>
               <p className="text-sm mt-2">Veuillez créer des espaces dans les paramètres.</p>
               <Button variant="secondary" onClick={onCancel} className="mt-4">Fermer</Button>
@@ -204,13 +226,49 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
   }
 
   return (
-    <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="flex flex-col h-full">
-      {/* Compact Progress Bar */}
-      <div className="mb-8 px-4 pt-3">
+    <form 
+        onSubmit={(e) => e.preventDefault()} 
+        onKeyDown={handleKeyDown} 
+        className="flex flex-col h-full"
+        autoComplete="off"
+    >
+      {/* Quick Actions Header (Only when Editing) */}
+      {isEditing && (
+          <div className="mb-6 mx-1 p-2 bg-white rounded-xl border border-stone-200 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] flex items-center justify-between gap-3 animate-in slide-in-from-top-2">
+               <div className="flex gap-2">
+                   <button
+                       type="button"
+                       onClick={() => setStatus(BookingStatus.CHECKED_IN)}
+                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${formData.status === BookingStatus.CHECKED_IN ? 'bg-sky-100 text-sky-700 border border-sky-200 shadow-sm' : 'bg-stone-50 text-stone-600 border border-stone-200 hover:bg-white hover:shadow-sm'}`}
+                   >
+                       <UserCheck size={14} /> Présent
+                   </button>
+                   <button
+                       type="button"
+                       onClick={() => setStatus(BookingStatus.NO_SHOW)}
+                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${formData.status === BookingStatus.NO_SHOW ? 'bg-zinc-100 text-zinc-700 border border-zinc-200 shadow-sm' : 'bg-stone-50 text-stone-600 border border-stone-200 hover:bg-white hover:shadow-sm'}`}
+                   >
+                       <UserX size={14} /> No-Show
+                   </button>
+               </div>
+               
+               <button
+                    type="button"
+                    onClick={togglePayment}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border shadow-sm ${formData.isPaid ? 'bg-brand-50 border-brand-200 text-brand-900' : 'bg-white border-orange-200 text-orange-600 hover:bg-orange-50'}`}
+               >
+                   {formData.isPaid ? <Check size={14} /> : <CreditCard size={14} />}
+                   {formData.isPaid ? 'Réglé' : 'À régler'}
+               </button>
+          </div>
+      )}
+
+      {/* Compact Progress Bar - Added pt-5 to prevent top clipping */}
+      <div className={`${isEditing ? 'mb-6' : 'mb-8 pt-5'} px-4`}>
           <div className="flex items-center justify-between relative">
-              <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-full h-0.5 bg-slate-100 -z-10 rounded-full"></div>
+              <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-full h-0.5 bg-stone-100 -z-10 rounded-full"></div>
               <div 
-                className="absolute left-0 top-1/2 transform -translate-y-1/2 h-0.5 bg-teal-500 -z-10 rounded-full transition-all duration-300" 
+                className="absolute left-0 top-1/2 transform -translate-y-1/2 h-0.5 bg-brand-900 -z-10 rounded-full transition-all duration-300" 
                 style={{ width: `${((currentStep - 1) / (STEPS.length - 1)) * 100}%` }}
               ></div>
               
@@ -223,12 +281,12 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
                       <div key={step.id} className="flex flex-col items-center relative group">
                           <div className={`
                               w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 z-10
-                              ${isActive ? 'bg-teal-600 border-teal-600 text-white shadow-lg shadow-teal-200 scale-110' : 
-                                isCompleted ? 'bg-teal-600 border-teal-600 text-white' : 'bg-white border-slate-200 text-slate-300'}
+                              ${isActive ? 'bg-brand-900 border-brand-900 text-white shadow-lg shadow-brand-200 scale-125' : 
+                                isCompleted ? 'bg-brand-900 border-brand-900 text-white' : 'bg-white border-stone-200 text-stone-300'}
                           `}>
                               {isCompleted ? <Check size={14} /> : <Icon size={14} />}
                           </div>
-                          <div className={`absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider transition-colors duration-300 ${isActive ? 'text-teal-700' : 'text-slate-300'}`}>
+                          <div className={`absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider transition-colors duration-300 ${isActive ? 'text-brand-900' : 'text-stone-300'}`}>
                              {step.title}
                           </div>
                       </div>
@@ -242,16 +300,16 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
         {currentStep === 1 && (
             <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div className="group">
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 ml-1">Client</label>
+                    <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide mb-1.5 ml-1">Client</label>
                     <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-teal-500 transition-colors" size={18}/>
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-brand-900 transition-colors" size={18}/>
                         <input
                             type="text"
                             name="customerName"
                             required
                             value={formData.customerName}
                             onChange={handleChange}
-                            className="w-full rounded-xl bg-slate-50 border-transparent focus:bg-white border-2 focus:border-teal-500 focus:ring-0 py-3 pl-10 pr-4 text-sm transition-all"
+                            className="w-full rounded-xl bg-stone-50 border-transparent focus:bg-white border-2 focus:border-brand-900 focus:ring-0 py-3 pl-10 pr-4 text-sm transition-all"
                             placeholder="Nom complet"
                             autoFocus
                         />
@@ -259,14 +317,16 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
                 </div>
 
                 <div className="group">
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 ml-1">Prestation</label>
+                    <div className="flex justify-between items-center mb-1.5 ml-1">
+                        <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide">Prestation</label>
+                        <span className="text-[10px] text-stone-400 italic font-medium">Optionnel</span>
+                    </div>
                     <input
                         type="text"
                         name="serviceName"
-                        required
                         value={formData.serviceName}
                         onChange={handleChange}
-                        className="w-full rounded-xl bg-slate-50 border-transparent focus:bg-white border-2 focus:border-teal-500 focus:ring-0 py-3 px-4 text-sm transition-all"
+                        className="w-full rounded-xl bg-stone-50 border-transparent focus:bg-white border-2 focus:border-brand-900 focus:ring-0 py-3 px-4 text-sm transition-all"
                         placeholder="Ex: Massage, Soin visage..."
                     />
                 </div>
@@ -277,16 +337,16 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
         {currentStep === 2 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 ml-1">Espace</label>
+                    <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide mb-1.5 ml-1">Espace</label>
                     <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto pr-1 custom-scrollbar">
                         {spaces.map(space => (
                             <div 
                                 key={space.id}
                                 onClick={() => setFormData(prev => ({ ...prev, spaceId: space.id }))}
-                                className={`cursor-pointer px-3 py-2 rounded-lg border-2 transition-all ${formData.spaceId === space.id ? 'bg-teal-50/50 border-teal-500' : 'bg-slate-50 border-transparent hover:bg-slate-100'}`}
+                                className={`cursor-pointer px-3 py-2 rounded-lg border-2 transition-all ${formData.spaceId === space.id ? 'bg-brand-50/50 border-brand-900' : 'bg-stone-50 border-transparent hover:bg-stone-100'}`}
                             >
-                                <div className={`font-semibold text-xs ${formData.spaceId === space.id ? 'text-teal-900' : 'text-slate-700'}`}>{space.name}</div>
-                                <div className="text-[10px] text-slate-500 mt-0.5">{space.type}</div>
+                                <div className={`font-semibold text-xs ${formData.spaceId === space.id ? 'text-brand-900' : 'text-stone-700'}`}>{space.name}</div>
+                                <div className="text-[10px] text-stone-500 mt-0.5">{space.type}</div>
                             </div>
                         ))}
                     </div>
@@ -294,7 +354,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
 
                 <div className="grid grid-cols-2 gap-3">
                      <div className="group">
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 ml-1">Date</label>
+                        <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide mb-1.5 ml-1">Date</label>
                         <div className="relative">
                             <input
                                 type="date"
@@ -302,14 +362,14 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
                                 required
                                 value={formData.date}
                                 onChange={handleChange}
-                                className="w-full rounded-xl bg-slate-50 border-transparent focus:bg-white border-2 focus:border-teal-500 focus:ring-0 py-2.5 pl-9 pr-2 text-sm transition-all"
+                                className="w-full rounded-xl bg-stone-50 border-transparent focus:bg-white border-2 focus:border-brand-900 focus:ring-0 py-2.5 pl-9 pr-2 text-sm transition-all"
                             />
-                            <CalendarIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <CalendarIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
                         </div>
                     </div>
                     <div>
-                         {/* Empty spacer for alignment or potential other field */}
-                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 ml-1">Durée (min)</label>
+                         {/* Linked Duration Field */}
+                         <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide mb-1.5 ml-1">Durée (min)</label>
                          <input
                             type="number"
                             name="durationMinutes"
@@ -318,34 +378,34 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
                             step="5"
                             value={formData.durationMinutes}
                             onChange={handleDurationChange}
-                            className="w-full rounded-xl bg-slate-50 border-transparent focus:bg-white border-2 focus:border-teal-500 focus:ring-0 py-2.5 px-3 text-sm font-medium"
+                            className="w-full rounded-xl bg-stone-50 border-transparent focus:bg-white border-2 focus:border-brand-900 focus:ring-0 py-2.5 px-3 text-sm font-medium"
                         />
                     </div>
                 </div>
 
-                {/* Time Range */}
-                <div className="flex items-center gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                {/* Time Range with End Time */}
+                <div className="flex items-center gap-2 bg-stone-50 p-3 rounded-xl border border-stone-100">
                     <div className="flex-1">
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Début</label>
+                        <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">Début</label>
                         <input
                             type="time"
                             name="startTime"
                             required
                             value={formData.startTime}
                             onChange={handleStartTimeChange}
-                            className="w-full bg-transparent font-bold text-lg text-slate-700 outline-none p-0 border-none focus:ring-0"
+                            className="w-full bg-transparent font-bold text-lg text-stone-700 outline-none p-0 border-none focus:ring-0"
                         />
                     </div>
-                    <ArrowRight size={20} className="text-slate-300" />
+                    <ArrowRight size={20} className="text-stone-300" />
                     <div className="flex-1 text-right">
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Fin</label>
+                        <label className="block text-[10px] font-bold text-stone-400 uppercase mb-1">Fin</label>
                         <input
                             type="time"
                             name="endTime"
                             required
                             value={formData.endTime}
                             onChange={handleEndTimeChange}
-                            className="w-full bg-transparent font-bold text-lg text-slate-700 outline-none p-0 border-none focus:ring-0 text-right"
+                            className="w-full bg-transparent font-bold text-lg text-stone-700 outline-none p-0 border-none focus:ring-0 text-right"
                         />
                     </div>
                 </div>
@@ -356,8 +416,9 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
         {currentStep === 3 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                 
+                {/* Capacity Alert */}
                 {capacityInfo && (
-                    <div className={`p-3 rounded-lg text-xs border flex items-center gap-3 ${capacityInfo.isOver ? 'bg-red-50 border-red-100 text-red-700' : 'bg-emerald-50 border-emerald-100 text-emerald-700'}`}>
+                    <div className={`p-3 rounded-lg text-xs border flex items-center gap-3 ${capacityInfo.isOver ? 'bg-red-50 border-red-100 text-red-700' : 'bg-brand-50 border-brand-100 text-brand-900'}`}>
                         {capacityInfo.isOver ? <AlertTriangle className="flex-shrink-0" size={18} /> : <Check className="flex-shrink-0" size={18} />}
                         <div>
                             <span className="font-bold block">{capacityInfo.isOver ? "Surbooking !" : "Créneau disponible"}</span>
@@ -366,14 +427,15 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
                     </div>
                 )}
 
-                <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 flex justify-between items-center text-sm">
-                    <span className="text-slate-500">Horaire prévu</span>
-                    <span className="font-bold text-slate-800">{formData.startTime} - {formData.endTime} ({formData.durationMinutes} min)</span>
+                {/* Info Row */}
+                <div className="bg-stone-50 rounded-xl p-3 border border-stone-100 flex justify-between items-center text-sm">
+                    <span className="text-stone-500">Horaire prévu</span>
+                    <span className="font-bold text-stone-800">{formData.startTime} - {formData.endTime} ({formData.durationMinutes} min)</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                     <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 ml-1">Personnes</label>
+                        <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide mb-1.5 ml-1">Personnes</label>
                         <div className="relative">
                             <input
                                 type="number"
@@ -382,18 +444,18 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
                                 min="1"
                                 value={formData.pax}
                                 onChange={handleChange}
-                                className="w-full rounded-xl bg-slate-50 border-transparent focus:bg-white border-2 focus:border-teal-500 focus:ring-0 py-2.5 pl-9 pr-3 text-sm"
+                                className="w-full rounded-xl bg-stone-50 border-transparent focus:bg-white border-2 focus:border-brand-900 focus:ring-0 py-2.5 pl-9 pr-3 text-sm"
                             />
-                            <Users size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <Users size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
                         </div>
                     </div>
                      <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 ml-1">Pause (Nettoyage)</label>
+                        <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide mb-1.5 ml-1">Pause (Nettoyage)</label>
                         <select
                             name="breakMinutes"
                             value={formData.breakMinutes}
                             onChange={handleChange}
-                            className="w-full rounded-xl bg-slate-50 border-transparent focus:bg-white border-2 focus:border-teal-500 focus:ring-0 py-2.5 px-3 text-sm"
+                            className="w-full rounded-xl bg-stone-50 border-transparent focus:bg-white border-2 focus:border-brand-900 focus:ring-0 py-2.5 px-3 text-sm"
                         >
                             <option value="0">Aucune</option>
                             <option value="15">15 min</option>
@@ -403,18 +465,36 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
                     </div>
                 </div>
 
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 ml-1">Statut</label>
-                    <select
-                        name="status"
-                        value={formData.status}
-                        onChange={handleChange}
-                        className="w-full rounded-xl bg-slate-50 border-transparent focus:bg-white border-2 focus:border-teal-500 focus:ring-0 py-2.5 px-3 text-sm"
-                    >
-                        {Object.values(BookingStatus).map(s => (
-                        <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-                        ))}
-                    </select>
+                {/* Status & Payment Row (Also in Quick Actions but detailed here) */}
+                <div className="grid grid-cols-2 gap-3">
+                    <div>
+                        <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide mb-1.5 ml-1">Statut</label>
+                        <select
+                            name="status"
+                            value={formData.status}
+                            onChange={handleChange}
+                            className="w-full rounded-xl bg-stone-50 border-transparent focus:bg-white border-2 focus:border-brand-900 focus:ring-0 py-2.5 px-3 text-sm"
+                        >
+                            {Object.values(BookingStatus).map(s => (
+                            <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Payment Toggle */}
+                    <div>
+                        <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide mb-1.5 ml-1">Règlement</label>
+                        <button
+                            type="button"
+                            onClick={togglePayment}
+                            className={`w-full rounded-xl border-2 flex items-center justify-between px-3 py-2.5 transition-all ${formData.isPaid ? 'bg-brand-50 border-brand-900 text-brand-900' : 'bg-stone-50 border-stone-200 text-stone-500 hover:border-stone-300'}`}
+                        >
+                            <span className="text-sm font-medium">{formData.isPaid ? 'Réglé' : 'À régler'}</span>
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center ${formData.isPaid ? 'bg-brand-900 text-white' : 'bg-stone-200'}`}>
+                                <CreditCard size={12} />
+                            </div>
+                        </button>
+                    </div>
                 </div>
             </div>
         )}
@@ -425,7 +505,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
         {/* Left Side: Delete */}
         <div>
             {onDelete && (
-                <button type="button" onClick={handleDelete} className="text-slate-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50" title="Supprimer">
+                <button type="button" onClick={handleDelete} className="text-stone-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50" title="Supprimer">
                     <Trash2 size={18} />
                 </button>
             )}
@@ -434,7 +514,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
         {/* Right Side: Navigation */}
         <div className="flex gap-2">
             {currentStep === 1 ? (
-                <Button type="button" variant="ghost" onClick={onCancel} className="text-slate-500">
+                <Button type="button" variant="ghost" onClick={onCancel} className="text-stone-500">
                     Annuler
                 </Button>
             ) : (
@@ -448,16 +528,17 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
                     type="button" 
                     variant="primary" 
                     onClick={nextStep}
-                    disabled={currentStep === 1 && (!formData.customerName || !formData.serviceName)}
+                    disabled={currentStep === 1 && !formData.customerName}
                     className="pl-5 pr-4"
                 >
                     Suivant <ChevronRight size={16} className="ml-1" />
                 </Button>
             ) : (
                 <Button 
-                    type="submit" 
+                    type="button" // Changed to explicit button type to prevent form submit race conditions
+                    onClick={triggerSubmit}
                     variant={capacityInfo?.isOver ? "danger" : "primary"}
-                    className="shadow-lg shadow-teal-500/30"
+                    className="shadow-lg shadow-brand-900/30"
                 >
                     {capacityInfo?.isOver ? "Forcer" : "Confirmer"}
                 </Button>

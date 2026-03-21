@@ -3,7 +3,9 @@ export enum BookingStatus {
   PENDING = 'PENDING',
   CANCELED = 'CANCELED',
   MAINTENANCE = 'MAINTENANCE',
-  BLOCKED = 'BLOCKED'
+  BLOCKED = 'BLOCKED',
+  CHECKED_IN = 'CHECKED_IN',
+  NO_SHOW = 'NO_SHOW'
 }
 
 export interface Space {
@@ -25,6 +27,7 @@ export interface Booking {
   pax: number; // Number of people
   status: BookingStatus;
   notes?: string;
+  isPaid: boolean;
 }
 
 export interface TimeSlot {
@@ -33,7 +36,6 @@ export interface TimeSlot {
 }
 
 export interface DailyStats {
-  revenue: number;
   occupancyRate: number;
   totalBookings: number;
 }

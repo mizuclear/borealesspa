@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Cormorant Garamond", ui-serif, Georgia, serif;
+  
+  --color-stone-50: #fafaf9;
+  --color-stone-100: #f5f5f4;
+  --color-stone-200: #e7e5e4;
+  --color-stone-300: #d6d3d1;
+  --color-stone-400: #a8a29e;
+  --color-stone-500: #78716c;
+  --color-stone-600: #57534e;
+  --color-stone-700: #44403c;
+  --color-stone-800: #292524;
+  --color-stone-900: #1c1917;
+
+  --color-brand-50: #f0f1fa;
+  --color-brand-100: #e4e4f6;
+  --color-brand-200: #cdd0ed;
+  --color-brand-300: #aab0e0;
+  --color-brand-400: #828bd0;
+  --color-brand-500: #6268c0;
+  --color-brand-600: #4c4eab;
+  --color-brand-700: #40408f;
+  --color-brand-800: #363675;
+  --color-brand-900: #2d2e83;
+  --color-brand-950: #1e1e4b;
+}
+
+@layer base {
+  body {
+    @apply font-sans bg-stone-50 text-stone-800 antialiased;
+  }
+}
+
+/* Custom scrollbar for horizontal calendar */
+.hide-scrollbar::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.hide-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.hide-scrollbar::-webkit-scrollbar-thumb {
+  background: #d6d3d1;
+  border-radius: 4px;
+}
+.hide-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #a8a29e;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e7e5e4;
+  border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #d6d3d1;
+}

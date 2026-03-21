@@ -1,7 +1,7 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Space, Booking, BookingStatus } from '../types';
 import { OPENING_HOUR, CLOSING_HOUR, PIXELS_PER_MINUTE } from '../constants';
-import { Plus, Users } from 'lucide-react';
+import { Plus, Users, Clock, Info } from 'lucide-react';
 
 interface PlanningGridProps {
   spaces: Space[];
@@ -21,10 +21,47 @@ const minutesToTime = (minutes: number): string => {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 };
 
+// Helper to get color based on status
+const getStatusColor = (status: BookingStatus) => {
+    switch (status) {
+        case BookingStatus.CONFIRMED: return 'brand';
+        case BookingStatus.CHECKED_IN: return 'sky'; // Distinct color for checked in
+        case BookingStatus.PENDING: return 'amber';
+        case BookingStatus.MAINTENANCE: return 'red';
+        case BookingStatus.BLOCKED: return 'stone';
+        case BookingStatus.NO_SHOW: return 'zinc'; // Dark grey/black for no-show
+        case BookingStatus.CANCELED: return 'gray';
+        default: return 'brand';
+    }
+};
+
 export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, onSlotClick, onBookingClick }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const totalMinutes = (CLOSING_HOUR - OPENING_HOUR) * 60;
   const gridWidth = totalMinutes * PIXELS_PER_MINUTE;
+  
+  // Current time state
+  const [currentTimePos, setCurrentTimePos] = useState<number | null>(null);
+
+  useEffect(() => {
+    const updateTime = () => {
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMin = now.getMinutes();
+        
+        // Only show if within opening hours
+        if (currentHour >= OPENING_HOUR && currentHour < CLOSING_HOUR) {
+            const minutesFromStart = ((currentHour - OPENING_HOUR) * 60) + currentMin;
+            setCurrentTimePos(minutesFromStart * PIXELS_PER_MINUTE);
+        } else {
+            setCurrentTimePos(null);
+        }
+    };
+    
+    updateTime();
+    const interval = setInterval(updateTime, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, []);
 
   const timeMarkers = [];
   for (let h = OPENING_HOUR; h <= CLOSING_HOUR; h++) {
@@ -32,7 +69,7 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
   }
 
   const handleGridClick = (e: React.MouseEvent, spaceId: string) => {
-    if ((e.target as HTMLElement).closest('.booking-block')) return;
+    if ((e.target as HTMLElement).closest('.booking-card')) return;
 
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const clickX = e.clientX - rect.left + (scrollRef.current?.scrollLeft || 0);
@@ -45,22 +82,25 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      {/* Header */}
-      <div className="flex border-b border-slate-200 bg-slate-50/80 backdrop-blur-sm sticky top-0 z-20">
-        <div className="w-40 md:w-56 flex-shrink-0 p-4 font-semibold text-slate-700 flex items-center border-r border-slate-200 text-sm md:text-base bg-slate-50">
-          Espaces
+    <div className="flex flex-col h-full bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+      {/* Sticky Header */}
+      <div className="flex border-b border-stone-200 bg-white sticky top-0 z-30 shadow-sm">
+        <div className="w-48 md:w-64 flex-shrink-0 p-4 font-bold text-stone-800 flex items-center border-r border-stone-200 bg-stone-50/50 backdrop-blur-md">
+          <span className="text-lg">Espaces</span>
+          <span className="ml-auto text-xs font-normal text-stone-400 bg-white px-2 py-1 rounded-full border border-stone-100">
+            {spaces.length} salles
+          </span>
         </div>
         <div className="flex-1 overflow-hidden relative" ref={scrollRef}>
-            <div style={{ width: `${gridWidth}px` }} className="h-12 relative flex items-center">
+            <div style={{ width: `${gridWidth}px` }} className="h-14 relative flex items-end pb-2">
                 {timeMarkers.map(hour => (
                     <div 
                         key={hour} 
-                        className="absolute text-xs text-slate-400 font-medium transform -translate-x-1/2 flex flex-col items-center"
+                        className="absolute transform -translate-x-1/2 flex flex-col items-center group"
                         style={{ left: `${(hour - OPENING_HOUR) * 60 * PIXELS_PER_MINUTE}px` }}
                     >
-                        <span>{hour}h</span>
-                        <div className="h-1.5 w-px bg-slate-300 mt-1"></div>
+                        <span className="text-xs font-semibold text-stone-400 group-hover:text-brand-900 transition-colors mb-1">{hour}h</span>
+                        <div className="h-1.5 w-px bg-stone-200 group-hover:bg-brand-900 transition-colors"></div>
                     </div>
                 ))}
             </div>
@@ -68,57 +108,143 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
       </div>
 
       {/* Grid Body */}
-      <div className="flex-1 overflow-y-auto overflow-x-auto hide-scrollbar relative">
-        <div className="min-w-max">
+      <div className="flex-1 overflow-y-auto overflow-x-auto hide-scrollbar relative bg-stone-50/30">
+        <div className="min-w-max relative">
+            
+            {/* Global Current Time Line (Overlay) */}
+            {currentTimePos !== null && (
+                <div 
+                    className="absolute top-0 bottom-0 z-40 border-l-2 border-red-500 pointer-events-none"
+                    style={{ left: `${256 + currentTimePos}px` /* 256px is roughly w-64 */ }} 
+                >
+                    <div className="absolute -top-1.5 -left-[5px] w-2.5 h-2.5 bg-red-500 rounded-full shadow-sm" />
+                    <div className="absolute top-2 left-1 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm opacity-80">
+                        Maintenant
+                    </div>
+                </div>
+            )}
+
             {spaces.map(space => {
-                const spaceBookings = bookings.filter(b => b.spaceId === space.id);
+                const spaceBookings = bookings.filter(b => b.spaceId === space.id && b.status !== BookingStatus.CANCELED);
                 
+                // --- Logic to calculate Full/Busy Zones ---
+                const timePoints = new Set<number>();
+                spaceBookings.forEach(b => {
+                    const start = timeToMinutes(b.startTime);
+                    const end = start + b.durationMinutes + (b.breakMinutes || 0);
+                    timePoints.add(start);
+                    timePoints.add(end);
+                });
+                
+                const sortedPoints = Array.from(timePoints).sort((a, b) => a - b);
+                const fullZones = [];
+                for (let i = 0; i < sortedPoints.length - 1; i++) {
+                    const p1 = sortedPoints[i];
+                    const p2 = sortedPoints[i+1];
+                    if (p2 <= p1) continue;
+                    
+                    const currentLoad = spaceBookings.reduce((sum, b) => {
+                         const bStart = timeToMinutes(b.startTime);
+                         const bEnd = bStart + b.durationMinutes + (b.breakMinutes || 0);
+                         if (bStart < p2 && bEnd > p1) return sum + (b.pax || 1);
+                         return sum;
+                    }, 0);
+
+                    if (currentLoad >= space.capacity) {
+                        fullZones.push({
+                            start: p1,
+                            end: p2,
+                            load: currentLoad,
+                            isOver: currentLoad > space.capacity
+                        });
+                    }
+                }
+
                 return (
-                <div key={space.id} className="flex border-b border-slate-100 group hover:bg-slate-50 transition-colors min-h-[5rem]">
-                    <div className="w-40 md:w-56 flex-shrink-0 p-3 border-r border-slate-200 bg-white sticky left-0 z-20 flex flex-col justify-center shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                        <div className="flex justify-between items-start">
-                             <span className="font-semibold text-slate-700 text-sm truncate">{space.name}</span>
-                             <div className="flex items-center text-slate-400 text-xs gap-1 bg-slate-100 px-1.5 py-0.5 rounded-full">
-                                <Users size={10} /> {space.capacity}
-                             </div>
+                <div key={space.id} className="flex border-b border-stone-100 group min-h-[7rem] hover:bg-white transition-colors">
+                    {/* Space Column */}
+                    <div className="w-48 md:w-64 flex-shrink-0 p-4 border-r border-stone-200 bg-white sticky left-0 z-20 flex flex-col justify-center shadow-[4px_0_10px_-4px_rgba(0,0,0,0.05)]">
+                        <div className="flex justify-between items-start mb-1">
+                             <span className="font-bold text-stone-700 text-sm truncate pr-2">{space.name}</span>
+                             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide border ${
+                                 space.type === 'MASSAGE' ? 'bg-purple-50 text-purple-700 border-purple-100' :
+                                 space.type === 'POOL' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                                 'bg-stone-50 text-stone-600 border-stone-100'
+                             }`}>
+                                 {space.type}
+                             </span>
                         </div>
-                        <span className="text-[11px] text-slate-400 uppercase tracking-wider mt-1">{space.type}</span>
+                        <div className="flex items-center text-stone-400 text-xs mt-1">
+                            <Users size={12} className="mr-1.5" /> 
+                            <span>Capacité: <strong className="text-stone-600">{space.capacity}</strong> pers.</span>
+                        </div>
                     </div>
                     
+                    {/* Time Grid for this Space */}
                     <div 
-                        className="relative h-20 border-r border-slate-100 bg-[linear-gradient(90deg,transparent_29px,#f1f5f9_30px)] bg-[length:75px_100%]"
+                        className="relative border-r border-stone-100 flex-1 bg-white"
                         style={{ width: `${gridWidth}px` }}
                         onClick={(e) => handleGridClick(e, space.id)}
                     >
-                        {/* Hour Vertical Lines */}
+                        {/* Vertical Guidelines */}
                         {timeMarkers.map(hour => (
                             <div 
                                 key={`line-${hour}`} 
-                                className="absolute top-0 bottom-0 border-l border-slate-100 border-dashed pointer-events-none"
+                                className="absolute top-0 bottom-0 border-l border-stone-100/60 pointer-events-none"
                                 style={{ left: `${(hour - OPENING_HOUR) * 60 * PIXELS_PER_MINUTE}px` }}
                             />
                         ))}
 
-                        {/* Bookings */}
-                        {spaceBookings.map((booking, index) => {
-                             // Naive stacking logic
-                             const myStart = timeToMinutes(booking.startTime);
+                        {/* Full/Overload Zones (Subtle Background) */}
+                        {fullZones.map((zone, idx) => {
+                             const startMins = zone.start - (OPENING_HOUR * 60);
+                             const width = (zone.end - zone.start) * PIXELS_PER_MINUTE;
+                             const left = startMins * PIXELS_PER_MINUTE;
                              
-                             // Visual Calculations
+                             return (
+                                 <div
+                                    key={`zone-${idx}`}
+                                    className={`absolute top-1 bottom-1 pointer-events-none z-0 flex items-center justify-center rounded-sm transition-all
+                                        ${zone.isOver ? 'bg-red-50' : 'bg-stone-100'}`}
+                                    style={{
+                                        left: `${left}px`,
+                                        width: `${width}px`,
+                                        // Subtle stripe pattern via CSS radial/linear gradient simulation
+                                        backgroundImage: 'linear-gradient(45deg, rgba(0,0,0,0.02) 25%, transparent 25%, transparent 50%, rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.02) 75%, transparent 75%, transparent)',
+                                        backgroundSize: '8px 8px'
+                                    }}
+                                 >
+                                     <div className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded border shadow-sm ${
+                                         zone.isOver ? 'bg-white text-red-600 border-red-100' : 'bg-white text-stone-400 border-stone-200'
+                                     }`}>
+                                         {zone.isOver ? 'Surbooké' : 'Complet'}
+                                     </div>
+                                 </div>
+                             );
+                        })}
+
+                        {/* Booking Cards */}
+                        {spaceBookings.map((booking, index) => {
+                             const myStart = timeToMinutes(booking.startTime);
                              const startMins = myStart - (OPENING_HOUR * 60);
                              const width = booking.durationMinutes * PIXELS_PER_MINUTE;
                              const breakWidth = (booking.breakMinutes || 0) * PIXELS_PER_MINUTE;
                              const left = startMins * PIXELS_PER_MINUTE;
 
-                             let bgClass = "bg-teal-100 border-teal-300 text-teal-800 shadow-sm";
-                             if (booking.status === BookingStatus.MAINTENANCE) bgClass = "bg-red-100 border-red-300 text-red-800";
-                             if (booking.status === BookingStatus.PENDING) bgClass = "bg-amber-100 border-amber-300 text-amber-800";
-                             if (booking.status === BookingStatus.BLOCKED) bgClass = "bg-slate-200 border-slate-400 text-slate-800";
-
-                             const laneIndex = index % Math.max(1, space.capacity);
-                             const heightPercent = space.capacity > 1 ? Math.max(30, 90 / space.capacity) : 80;
-                             const topPercent = space.capacity > 1 ? (laneIndex * (95 / space.capacity)) : 10;
+                             // Color logic
+                             const colorName = getStatusColor(booking.status);
+                             const borderClass = colorName === 'brand' ? 'border-brand-900' : `border-${colorName}-500`;
+                             const textClass = colorName === 'brand' ? 'text-brand-900' : `text-${colorName}-900`;
+                             const bgClass = booking.status === BookingStatus.NO_SHOW ? 'bg-zinc-100' : 'bg-white';
                              
+                             // Stacking Logic
+                             const laneIndex = index % Math.max(1, space.capacity);
+                             const effectiveCapacity = Math.max(1, space.capacity); // Simplified stacking for cleaner look
+                             
+                             // Card layout variables
+                             const topPercent = 5 + (index % effectiveCapacity) * (90 / effectiveCapacity);
+                             const heightPercent = 85 / effectiveCapacity;
+
                              return (
                                 <React.Fragment key={booking.id}>
                                     <div
@@ -127,48 +253,80 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
                                             width: `${width}px`,
                                             top: `${topPercent}%`,
                                             height: `${heightPercent}%`,
-                                            zIndex: 10 + index
+                                            zIndex: 20 + index
                                         }}
-                                        className={`booking-block absolute rounded-md border text-xs px-2 flex flex-col justify-center overflow-hidden whitespace-nowrap cursor-pointer hover:shadow-md hover:brightness-95 transition-all ${bgClass}`}
+                                        className={`booking-card absolute flex flex-col justify-center px-3 py-1 cursor-pointer transition-all duration-200
+                                            ${bgClass} border border-stone-200 border-l-4 rounded-r-md shadow-sm hover:shadow-md hover:scale-[1.01] hover:z-30
+                                            ${borderClass} overflow-hidden group/card`}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             onBookingClick(booking);
                                         }}
-                                        title={`${booking.customerName} - ${booking.serviceName}`}
                                     >
-                                        <div className="font-semibold truncate text-[11px] leading-tight flex justify-between items-center">
-                                            <span>{booking.serviceName}</span>
-                                            {booking.pax > 1 && <span className="text-[9px] bg-white/30 px-1 rounded flex items-center"><Users size={8} className="mr-0.5"/> {booking.pax}</span>}
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span className={`font-bold text-xs truncate ${textClass} ${booking.status === BookingStatus.NO_SHOW ? 'line-through opacity-70' : ''}`}>{booking.serviceName}</span>
+                                            {booking.pax > 1 && (
+                                                <div className="flex items-center bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded-full text-[9px] flex-shrink-0">
+                                                    <Users size={8} className="mr-0.5" /> {booking.pax}
+                                                </div>
+                                            )}
                                         </div>
-                                        {heightPercent > 40 && <div className="truncate opacity-80 text-[10px]">{booking.customerName}</div>}
+                                        {/* Hide details if slot is too small vertically */}
+                                        {heightPercent > 30 && width > 60 && (
+                                            <div className="text-[10px] text-stone-500 truncate mt-0.5 flex items-center gap-1">
+                                                <span className="font-medium">{booking.customerName}</span>
+                                                <span className="text-stone-300">•</span>
+                                                <span>{booking.startTime} - {minutesToTime(timeToMinutes(booking.startTime) + booking.durationMinutes)}</span>
+                                            </div>
+                                        )}
+                                        
+                                        {/* Hover Tooltip (Simple browser title for now, or could be a custom component) */}
+                                        <div className="hidden group-hover/card:block absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center font-semibold text-xs text-stone-800 opacity-0 group-hover/card:opacity-100 transition-opacity">
+                                            Voir détails
+                                        </div>
                                     </div>
                                     
+                                    {/* Break / Cleaning Time */}
                                     {booking.breakMinutes && booking.breakMinutes > 0 && (
                                         <div 
-                                            className="absolute z-0 bg-slate-100 rounded-r-md border-y border-r border-slate-200/50"
+                                            className="absolute z-10 bg-stone-50 rounded-r border-y border-r border-stone-200/50 flex items-center justify-center"
                                             style={{
                                                 left: `${left + width}px`,
                                                 width: `${breakWidth}px`,
-                                                top: `${topPercent}%`,
-                                                height: `${heightPercent}%`,
-                                                backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 2px, #cbd5e1 2px, #cbd5e1 4px)'
+                                                top: `${topPercent + 10}%`, // Slightly smaller height
+                                                height: `${heightPercent - 20}%`,
+                                                backgroundImage: 'linear-gradient(135deg, #cbd5e1 25%, transparent 25%, transparent 50%, #cbd5e1 50%, #cbd5e1 75%, transparent 75%, transparent)',
+                                                backgroundSize: '4px 4px'
                                             }}
                                             title="Temps de pause / Nettoyage"
-                                        />
+                                        >
+                                            <Clock size={10} className="text-stone-400 opacity-50" />
+                                        </div>
                                     )}
                                 </React.Fragment>
                             );
                         })}
                         
-                        {/* Hover Plus */}
-                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none flex items-center justify-center">
-                            <Plus className="text-slate-300 w-6 h-6" />
+                        {/* Hover Interaction Layer */}
+                        <div className="absolute inset-0 opacity-0 hover:opacity-100 pointer-events-none z-10">
+                            <div className="h-full w-px bg-brand-900/30 absolute top-0 bottom-0 shadow-[0_0_10px_rgba(45,46,131,0.3)] hidden group-hover:block" 
+                                 style={{ left: 'var(--mouse-x, 0px)' }} />
                         </div>
                     </div>
                 </div>
                 );
             })}
         </div>
+      </div>
+      
+      {/* Legend Footer */}
+      <div className="bg-white border-t border-stone-200 p-2 px-6 flex items-center gap-6 text-[10px] text-stone-500 uppercase tracking-wider font-semibold">
+            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-brand-900"></div> Confirmé</div>
+            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-sky-500"></div> Présent</div>
+            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-zinc-500"></div> No-Show</div>
+            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-amber-500"></div> En attente</div>
+            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-red-500"></div> Maintenance</div>
+            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-stone-100 border border-stone-300"></div> Complet</div>
       </div>
     </div>
   );
