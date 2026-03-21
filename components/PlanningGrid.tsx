@@ -164,6 +164,52 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
                     }
                 }
 
+                // Calculate lanes based on pax
+                const sortedBookings = [...spaceBookings].sort((a, b) => {
+                    const startA = timeToMinutes(a.startTime);
+                    const startB = timeToMinutes(b.startTime);
+                    if (startA !== startB) return startA - startB;
+                    return b.durationMinutes - a.durationMinutes;
+                });
+
+                const lanes: { end: number }[] = [];
+                const bookingLanes = new Map<string, { startLane: number, laneCount: number }>();
+                let maxLanesUsed = space.capacity;
+
+                sortedBookings.forEach(booking => {
+                    const start = timeToMinutes(booking.startTime);
+                    const end = start + booking.durationMinutes + (booking.breakMinutes || 0);
+                    const pax = booking.pax || 1;
+
+                    let foundStartLane = -1;
+                    let currentContiguous = 0;
+                    let searchStartLane = 0;
+
+                    for (let i = 0; i < 100; i++) { // arbitrary max to prevent infinite loop
+                        if (!lanes[i] || lanes[i].end <= start) {
+                            if (currentContiguous === 0) searchStartLane = i;
+                            currentContiguous++;
+                            if (currentContiguous === pax) {
+                                foundStartLane = searchStartLane;
+                                break;
+                            }
+                        } else {
+                            currentContiguous = 0;
+                        }
+                    }
+
+                    if (foundStartLane === -1) foundStartLane = maxLanesUsed;
+
+                    for (let i = foundStartLane; i < foundStartLane + pax; i++) {
+                        lanes[i] = { end };
+                    }
+
+                    maxLanesUsed = Math.max(maxLanesUsed, foundStartLane + pax);
+                    bookingLanes.set(booking.id, { startLane: foundStartLane, laneCount: pax });
+                });
+
+                const effectiveCapacity = Math.max(space.capacity, maxLanesUsed);
+
                 return (
                 <div key={space.id} className="flex border-b border-stone-100 group min-h-[7rem] hover:bg-white transition-colors">
                     {/* Space Column */}
@@ -244,7 +290,7 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
                         })}
 
                         {/* Booking Cards */}
-                        {spaceBookings.map((booking, index) => {
+                        {sortedBookings.map((booking, index) => {
                              const myStart = timeToMinutes(booking.startTime);
                              const startMins = myStart - (OPENING_HOUR * 60);
                              const width = booking.durationMinutes * PIXELS_PER_MINUTE;
@@ -258,12 +304,11 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
                              const bgClass = booking.status === BookingStatus.NO_SHOW ? 'bg-zinc-100' : 'bg-white';
                              
                              // Stacking Logic
-                             const laneIndex = index % Math.max(1, space.capacity);
-                             const effectiveCapacity = Math.max(1, space.capacity); // Simplified stacking for cleaner look
+                             const laneInfo = bookingLanes.get(booking.id) || { startLane: 0, laneCount: 1 };
                              
                              // Card layout variables
-                             const topPercent = 5 + (index % effectiveCapacity) * (90 / effectiveCapacity);
-                             const heightPercent = 85 / effectiveCapacity;
+                             const topPercent = 5 + (laneInfo.startLane / effectiveCapacity) * 90;
+                             const heightPercent = (laneInfo.laneCount / effectiveCapacity) * 90;
                              
                              const isHighlighted = booking.id === highlightedBookingId;
 
