@@ -29,6 +29,8 @@ const App: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [highlightedBookingId, setHighlightedBookingId] = useState<string | null>(null);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
@@ -222,6 +224,23 @@ const App: React.FC = () => {
       setSelectedDate(date.toISOString().split('T')[0]);
   };
 
+  const searchResults = bookings.filter(b => 
+      searchQuery && (b.customerName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      b.serviceName.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const handleSelectSearchResult = (booking: Booking) => {
+      setCurrentView(View.CALENDAR);
+      setHighlightedBookingId(booking.id);
+      setSearchQuery('');
+      setIsSearchOpen(false);
+      
+      // Remove highlight after 3 seconds
+      setTimeout(() => {
+          setHighlightedBookingId(null);
+      }, 3000);
+  };
+
   if (!isAuthenticated) {
     return <Login onLogin={() => setIsAuthenticated(true)} />;
   }
@@ -331,15 +350,40 @@ const App: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-2 md:gap-4">
-            <div className="relative hidden lg:block">
+            <div className="relative hidden lg:block z-50">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-400" size={18} />
                 <input 
                   type="text" 
                   placeholder="Rechercher un client..." 
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setIsSearchOpen(true);
+                  }}
+                  onFocus={() => setIsSearchOpen(true)}
+                  onBlur={() => setTimeout(() => setIsSearchOpen(false), 200)}
                   className="pl-10 pr-4 py-2 bg-stone-100 rounded-full text-sm border-transparent focus:bg-white focus:ring-2 focus:ring-brand-900 transition-all outline-none w-48 lg:w-64" 
                 />
+                {isSearchOpen && searchQuery && (
+                    <div className="absolute top-full mt-2 w-full bg-white rounded-xl shadow-xl border border-stone-200 overflow-hidden max-h-64 overflow-y-auto">
+                        {searchResults.length > 0 ? (
+                            <div className="py-1">
+                                {searchResults.map(b => (
+                                    <div 
+                                        key={b.id} 
+                                        className="px-4 py-2 hover:bg-stone-50 cursor-pointer border-b border-stone-100 last:border-0"
+                                        onClick={() => handleSelectSearchResult(b)}
+                                    >
+                                        <div className="font-bold text-sm text-stone-800">{b.customerName}</div>
+                                        <div className="text-xs text-stone-500">{b.serviceName} • {b.startTime}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="px-4 py-3 text-sm text-stone-500 text-center">Aucun résultat</div>
+                        )}
+                    </div>
+                )}
             </div>
             {currentView === View.CALENDAR && (
                 <Button onClick={() => { setEditingBooking(null); setInitialFormState({date: selectedDate, startTime: '09:00', durationMinutes: 60, pax: 1}); setIsModalOpen(true); }} className="whitespace-nowrap">
@@ -361,15 +405,16 @@ const App: React.FC = () => {
                     <div className="flex-1 p-2 md:p-6 overflow-hidden">
                         <PlanningGrid 
                             spaces={spaces} 
-                            bookings={bookings.filter(b => b.customerName.toLowerCase().includes(searchQuery.toLowerCase()) || b.serviceName.toLowerCase().includes(searchQuery.toLowerCase()))} 
+                            bookings={bookings} 
                             onSlotClick={handleSlotClick} 
                             onBookingClick={handleBookingClick}
+                            highlightedBookingId={highlightedBookingId}
                         />
                     </div>
                 )}
                 {currentView === View.DASHBOARD && (
                     <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
-                        <Dashboard bookings={bookings.filter(b => b.customerName.toLowerCase().includes(searchQuery.toLowerCase()) || b.serviceName.toLowerCase().includes(searchQuery.toLowerCase()))} />
+                        <Dashboard bookings={bookings} />
                     </div>
                 )}
                 {currentView === View.SETTINGS && (

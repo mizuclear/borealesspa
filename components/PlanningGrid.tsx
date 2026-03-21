@@ -8,6 +8,7 @@ interface PlanningGridProps {
   bookings: Booking[];
   onSlotClick: (spaceId: string, time: string) => void;
   onBookingClick: (booking: Booking) => void;
+  highlightedBookingId?: string | null;
 }
 
 const timeToMinutes = (time: string): number => {
@@ -35,13 +36,22 @@ const getStatusColor = (status: BookingStatus) => {
     }
 };
 
-export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, onSlotClick, onBookingClick }) => {
+export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, onSlotClick, onBookingClick, highlightedBookingId }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const totalMinutes = (CLOSING_HOUR - OPENING_HOUR) * 60;
   const gridWidth = totalMinutes * PIXELS_PER_MINUTE;
   
   // Current time state
   const [currentTimePos, setCurrentTimePos] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (highlightedBookingId) {
+        const el = document.getElementById(`booking-${highlightedBookingId}`);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        }
+    }
+  }, [highlightedBookingId]);
 
   useEffect(() => {
     const updateTime = () => {
@@ -254,20 +264,24 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
                              // Card layout variables
                              const topPercent = 5 + (index % effectiveCapacity) * (90 / effectiveCapacity);
                              const heightPercent = 85 / effectiveCapacity;
+                             
+                             const isHighlighted = booking.id === highlightedBookingId;
 
                              return (
                                 <React.Fragment key={booking.id}>
                                     <div
+                                        id={`booking-${booking.id}`}
                                         style={{ 
                                             left: `${left}px`, 
                                             width: `${width}px`,
                                             top: `${topPercent}%`,
                                             height: `${heightPercent}%`,
-                                            zIndex: 10 + index
+                                            zIndex: isHighlighted ? 50 : 10 + index
                                         }}
-                                        className={`booking-card absolute flex flex-col justify-center px-3 py-1 cursor-pointer transition-all duration-200
+                                        className={`booking-card absolute flex flex-col justify-center px-3 py-1 cursor-pointer transition-all duration-300
                                             ${bgClass} border border-stone-200 border-l-4 rounded-r-md shadow-sm hover:shadow-md hover:scale-[1.01] hover:z-20
-                                            ${borderClass} overflow-hidden group/card`}
+                                            ${borderClass} overflow-hidden group/card
+                                            ${isHighlighted ? 'ring-4 ring-brand-500 shadow-2xl scale-105 animate-pulse' : ''}`}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             onBookingClick(booking);
@@ -304,13 +318,13 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
                                         )}
                                         
                                         {/* Hover Tooltip (Simple browser title for now, or could be a custom component) */}
-                                        <div className="hidden group-hover/card:block absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center font-semibold text-xs text-stone-800 opacity-0 group-hover/card:opacity-100 transition-opacity">
+                                        <div className="hidden group-hover/card:flex absolute inset-0 bg-white/50 backdrop-blur-[1px] items-center justify-center font-semibold text-xs text-stone-800 opacity-0 group-hover/card:opacity-100 transition-opacity">
                                             Voir détails
                                         </div>
                                     </div>
                                     
                                     {/* Break / Cleaning Time */}
-                                    {booking.breakMinutes && booking.breakMinutes > 0 && (
+                                    {(booking.breakMinutes || 0) > 0 && (
                                         <div 
                                             className="absolute z-10 bg-stone-50 rounded-r border-y border-r border-stone-200/50 flex items-center justify-center"
                                             style={{
