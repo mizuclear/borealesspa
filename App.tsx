@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, LayoutDashboard, Settings, Plus, Search, Menu, X, Loader2, ChevronLeft, ChevronRight, LogOut, History, RefreshCw } from 'lucide-react';
-import { Space, Booking } from './types';
+import { Space, Booking, BookingStatus } from './types';
 import { PlanningGrid } from './components/PlanningGrid';
 import { Dashboard } from './components/Dashboard';
 import { Modal } from './components/Modal';
