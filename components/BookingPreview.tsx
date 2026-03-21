@@ -81,7 +81,7 @@ export const BookingPreview: React.FC<BookingPreviewProps> = ({
                 {booking.customerName}
             </h2>
             {booking.roomNumber && (
-                <p className="text-stone-500 font-medium mt-1">Chambre : {booking.roomNumber}</p>
+                <p className="text-stone-500 font-medium mt-1">Appartement : {booking.roomNumber}</p>
             )}
         </div>
 

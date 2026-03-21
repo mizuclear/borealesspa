@@ -271,7 +271,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
         {currentStep === 1 && (
             <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div className="group">
-                    <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide mb-1.5 ml-1">Client</label>
+                    <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide mb-1.5 ml-1">Nom</label>
                     <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-brand-900 transition-colors" size={18}/>
                         <input
@@ -281,7 +281,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
                             value={formData.customerName}
                             onChange={handleChange}
                             className="w-full rounded-xl bg-stone-50 border-transparent focus:bg-white border-2 focus:border-brand-900 focus:ring-0 py-3 pl-10 pr-4 text-sm transition-all"
-                            placeholder="Nom complet"
+                            placeholder="Nom du client"
                             autoFocus
                         />
                     </div>
@@ -304,7 +304,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
                     </div>
                     <div className="group">
                         <div className="flex justify-between items-center mb-1.5 ml-1">
-                            <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide">N° Chambre</label>
+                            <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide">N° Appartement</label>
                             <span className="text-[10px] text-stone-400 italic font-medium">Optionnel</span>
                         </div>
                         <input

@@ -9,6 +9,7 @@ interface PlanningGridProps {
   onSlotClick: (spaceId: string, time: string) => void;
   onBookingClick: (booking: Booking) => void;
   highlightedBookingId?: string | null;
+  selectedDate: string;
 }
 
 const timeToMinutes = (time: string): number => {
@@ -36,7 +37,7 @@ const getStatusColor = (status: BookingStatus) => {
     }
 };
 
-export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, onSlotClick, onBookingClick, highlightedBookingId }) => {
+export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, onSlotClick, onBookingClick, highlightedBookingId, selectedDate }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const gridBodyRef = useRef<HTMLDivElement>(null);
   const totalMinutes = (CLOSING_HOUR - OPENING_HOUR) * 60;
@@ -99,6 +100,13 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
   useEffect(() => {
     const updateTime = () => {
         const now = new Date();
+        const isToday = selectedDate === now.toISOString().split('T')[0];
+        
+        if (!isToday) {
+            setCurrentTimePos(null);
+            return;
+        }
+
         const currentHour = now.getHours();
         const currentMin = now.getMinutes();
         
@@ -114,31 +122,38 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
     updateTime();
     const interval = setInterval(updateTime, 60000); // Update every minute
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedDate]);
 
-  // Scroll to current time on initial load
-  const initialScrollDone = useRef(false);
+  // Scroll to current time on initial load or date change
+  const initialScrollDone = useRef<Record<string, boolean>>({});
   useEffect(() => {
-    if (!highlightedBookingId && !initialScrollDone.current) {
+    if (!highlightedBookingId && !initialScrollDone.current[selectedDate]) {
         // Small delay to ensure DOM is fully rendered and dimensions are available
         const timer = setTimeout(() => {
             if (gridBodyRef.current) {
                 const now = new Date();
-                const currentHour = now.getHours();
-                const currentMin = now.getMinutes();
+                const isToday = selectedDate === now.toISOString().split('T')[0];
                 
-                if (currentHour >= OPENING_HOUR && currentHour < CLOSING_HOUR) {
-                    const minutesFromStart = ((currentHour - OPENING_HOUR) * 60) + currentMin;
-                    const targetX = minutesFromStart * PIXELS_PER_MINUTE;
-                    const containerWidth = gridBodyRef.current.clientWidth;
-                    gridBodyRef.current.scrollLeft = Math.max(0, targetX - containerWidth / 2);
+                if (isToday) {
+                    const currentHour = now.getHours();
+                    const currentMin = now.getMinutes();
+                    
+                    if (currentHour >= OPENING_HOUR && currentHour < CLOSING_HOUR) {
+                        const minutesFromStart = ((currentHour - OPENING_HOUR) * 60) + currentMin;
+                        const targetX = minutesFromStart * PIXELS_PER_MINUTE;
+                        const containerWidth = gridBodyRef.current.clientWidth;
+                        gridBodyRef.current.scrollLeft = Math.max(0, targetX - containerWidth / 2);
+                    }
+                } else {
+                    // If not today, scroll to start of day
+                    gridBodyRef.current.scrollLeft = 0;
                 }
-                initialScrollDone.current = true;
+                initialScrollDone.current[selectedDate] = true;
             }
         }, 100);
         return () => clearTimeout(timer);
     }
-  }, [highlightedBookingId]);
+  }, [highlightedBookingId, selectedDate]);
 
   const timeMarkers = [];
   for (let h = OPENING_HOUR; h <= CLOSING_HOUR; h++) {

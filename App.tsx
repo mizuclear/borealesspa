@@ -267,6 +267,28 @@ const App: React.FC = () => {
       }, 3000);
   };
 
+  const getUpcomingBookings = () => {
+      const now = new Date();
+      const isToday = selectedDate === now.toISOString().split('T')[0];
+      const currentMins = now.getHours() * 60 + now.getMinutes();
+
+      return bookings
+          .filter(b => b.status !== BookingStatus.CANCELED && b.status !== BookingStatus.NO_SHOW)
+          .filter(b => {
+              if (!isToday) return true;
+              const startMins = parseInt(b.startTime.split(':')[0]) * 60 + parseInt(b.startTime.split(':')[1]);
+              return startMins >= currentMins;
+          })
+          .sort((a, b) => {
+              const startA = parseInt(a.startTime.split(':')[0]) * 60 + parseInt(a.startTime.split(':')[1]);
+              const startB = parseInt(b.startTime.split(':')[0]) * 60 + parseInt(b.startTime.split(':')[1]);
+              return startA - startB;
+          })
+          .slice(0, 4);
+  };
+
+  const upcomingBookings = getUpcomingBookings();
+
   if (!isAuthenticated) {
     return <Login onLogin={() => setIsAuthenticated(true)} />;
   }
@@ -302,7 +324,7 @@ const App: React.FC = () => {
             </button>
         </div>
         
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
           <button 
             onClick={() => { setCurrentView(View.CALENDAR); setIsSidebarOpen(false); }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${currentView === View.CALENDAR ? 'bg-brand-900 text-white shadow-lg shadow-brand-900/50' : 'text-stone-400 hover:bg-stone-800 hover:text-white'}`}
@@ -334,6 +356,34 @@ const App: React.FC = () => {
             <History size={20} />
             <span className="font-medium">Historique (Logs)</span>
           </button>
+
+          <div className="mt-8 pt-6 border-t border-stone-800">
+            <h3 className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-3 px-2">Prochaines séances</h3>
+            {upcomingBookings.length > 0 ? (
+                <div className="space-y-2">
+                    {upcomingBookings.map(b => {
+                        const space = spaces.find(s => s.id === b.spaceId);
+                        return (
+                            <div 
+                                key={b.id} 
+                                onClick={() => handleSelectSearchResult(b)}
+                                className="bg-stone-800/50 hover:bg-stone-800 p-3 rounded-lg cursor-pointer transition-colors border border-stone-700/50"
+                            >
+                                <div className="flex justify-between items-start mb-1">
+                                    <span className="font-bold text-sm text-stone-200 truncate pr-2">{b.customerName} {b.roomNumber ? `(${b.roomNumber})` : ''}</span>
+                                    <span className="text-brand-400 text-xs font-mono bg-brand-900/20 px-1.5 py-0.5 rounded flex-shrink-0">{b.startTime}</span>
+                                </div>
+                                <div className="text-xs text-stone-400 truncate">
+                                    {space?.name || 'Espace inconnu'}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            ) : (
+                <div className="text-sm text-stone-500 px-2 italic">Aucune séance à venir</div>
+            )}
+          </div>
         </nav>
 
         <div className="p-4 border-t border-stone-800">
@@ -448,6 +498,7 @@ const App: React.FC = () => {
                             onSlotClick={handleSlotClick} 
                             onBookingClick={handleBookingClick}
                             highlightedBookingId={highlightedBookingId}
+                            selectedDate={selectedDate}
                         />
                     </div>
                 )}

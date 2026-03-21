@@ -52,6 +52,16 @@ export const SpaceManager: React.FC<SpaceManagerProps> = ({ spaces, onAddSpace, 
       }
   };
 
+  const getSpaceImage = (type: string, name: string) => {
+      const lowerName = name.toLowerCase();
+      if (type === 'MASSAGE' || lowerName.includes('massage')) return 'https://i.ibb.co/fY93Fmcg/Tabledemassage.png';
+      if (type === 'POOL' || lowerName.includes('piscine') || lowerName.includes('bassin')) return 'https://i.ibb.co/4RKvrkK1/Piscine.png';
+      if (type === 'SAUNA' || lowerName.includes('sauna')) return 'https://i.ibb.co/My2DbZDz/Sauna.png';
+      if (type === 'RELAX' || lowerName.includes('hydro') || lowerName.includes('lit') || lowerName.includes('détente')) return 'https://i.ibb.co/mFJCnsRw/Lit-Hydro.png';
+      // Default fallback
+      return 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80';
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="flex justify-between items-center mb-8">
@@ -161,9 +171,9 @@ export const SpaceManager: React.FC<SpaceManagerProps> = ({ spaces, onAddSpace, 
           return (
           <div key={space.id} className="bg-white p-4 rounded-xl shadow-sm border border-stone-200 flex flex-col justify-between group hover:border-brand-900 transition-colors">
             <div>
-                <div className="flex items-start justify-between">
-                    <div className="p-2 bg-stone-50 rounded-lg text-brand-900 mb-3">
-                        <MapPin size={20} />
+                <div className="flex items-start justify-between mb-3">
+                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-stone-100 border border-stone-200">
+                        <img src={getSpaceImage(space.type, space.name)} alt={space.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     </div>
                     <div className="flex items-center gap-1">
                         <span className="text-xs font-mono text-stone-400 bg-stone-50 px-2 py-1 rounded">{space.type}</span>
