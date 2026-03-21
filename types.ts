@@ -28,6 +28,7 @@ export interface Booking {
   status: BookingStatus;
   notes?: string;
   isPaid: boolean;
+  roomNumber?: string;
 }
 
 export interface TimeSlot {

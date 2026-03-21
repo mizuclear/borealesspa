@@ -58,6 +58,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
     pax: initialData?.pax || 1,
     status: initialData?.status || BookingStatus.CONFIRMED,
     isPaid: initialData?.isPaid || false,
+    roomNumber: initialData?.roomNumber || '',
   });
 
   // Calculate initial EndTime if not present or on load
@@ -176,7 +177,8 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
         serviceName: formData.serviceName || 'Réservation', // Default if empty
         durationMinutes: Number(formData.durationMinutes),
         breakMinutes: Number(formData.breakMinutes),
-        pax: Number(formData.pax)
+        pax: Number(formData.pax),
+        roomNumber: formData.roomNumber
     });
   };
 
@@ -316,19 +318,35 @@ export const BookingForm: React.FC<BookingFormProps> = ({ spaces, onSubmit, onCa
                     </div>
                 </div>
 
-                <div className="group">
-                    <div className="flex justify-between items-center mb-1.5 ml-1">
-                        <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide">Prestation</label>
-                        <span className="text-[10px] text-stone-400 italic font-medium">Optionnel</span>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="group">
+                        <div className="flex justify-between items-center mb-1.5 ml-1">
+                            <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide">Prestation</label>
+                            <span className="text-[10px] text-stone-400 italic font-medium">Optionnel</span>
+                        </div>
+                        <input
+                            type="text"
+                            name="serviceName"
+                            value={formData.serviceName}
+                            onChange={handleChange}
+                            className="w-full rounded-xl bg-stone-50 border-transparent focus:bg-white border-2 focus:border-brand-900 focus:ring-0 py-3 px-4 text-sm transition-all"
+                            placeholder="Ex: Massage..."
+                        />
                     </div>
-                    <input
-                        type="text"
-                        name="serviceName"
-                        value={formData.serviceName}
-                        onChange={handleChange}
-                        className="w-full rounded-xl bg-stone-50 border-transparent focus:bg-white border-2 focus:border-brand-900 focus:ring-0 py-3 px-4 text-sm transition-all"
-                        placeholder="Ex: Massage, Soin visage..."
-                    />
+                    <div className="group">
+                        <div className="flex justify-between items-center mb-1.5 ml-1">
+                            <label className="block text-xs font-bold text-stone-500 uppercase tracking-wide">N° Chambre</label>
+                            <span className="text-[10px] text-stone-400 italic font-medium">Optionnel</span>
+                        </div>
+                        <input
+                            type="text"
+                            name="roomNumber"
+                            value={formData.roomNumber}
+                            onChange={handleChange}
+                            className="w-full rounded-xl bg-stone-50 border-transparent focus:bg-white border-2 focus:border-brand-900 focus:ring-0 py-3 px-4 text-sm transition-all"
+                            placeholder="Ex: 104"
+                        />
+                    </div>
                 </div>
             </div>
         )}

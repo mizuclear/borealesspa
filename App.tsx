@@ -89,7 +89,8 @@ const App: React.FC = () => {
             breakMinutes: b.break_minutes,
             pax: b.pax || 1,
             status: b.status,
-            isPaid: b.is_paid || false
+            isPaid: b.is_paid || false,
+            roomNumber: b.room_number
         })) || [];
 
         setSpaces(mappedSpaces);
@@ -151,7 +152,8 @@ const App: React.FC = () => {
         break_minutes: data.breakMinutes,
         pax: data.pax,
         status: data.status,
-        is_paid: data.isPaid
+        is_paid: data.isPaid,
+        room_number: data.roomNumber
     };
 
     const isSameDate = data.date === selectedDate;
@@ -225,8 +227,11 @@ const App: React.FC = () => {
   };
 
   const searchResults = bookings.filter(b => 
-      searchQuery && (b.customerName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      b.serviceName.toLowerCase().includes(searchQuery.toLowerCase()))
+      searchQuery && (
+          b.customerName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+          b.serviceName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (b.roomNumber && b.roomNumber.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
   );
 
   const handleSelectSearchResult = (booking: Booking) => {
@@ -322,7 +327,7 @@ const App: React.FC = () => {
       </aside>
 
       <main className="flex-1 flex flex-col relative overflow-hidden w-full">
-        <header className="h-16 bg-white border-b border-stone-200 flex items-center justify-between px-4 md:px-6 flex-shrink-0 z-20">
+        <header className="h-16 bg-white border-b border-stone-200 flex items-center justify-between px-4 md:px-6 flex-shrink-0 z-[60]">
           <div className="flex items-center gap-3">
             <button onClick={toggleSidebar} className="md:hidden text-stone-500 hover:text-stone-700">
               <Menu size={24} />
@@ -375,7 +380,10 @@ const App: React.FC = () => {
                                         onClick={() => handleSelectSearchResult(b)}
                                     >
                                         <div className="font-bold text-sm text-stone-800">{b.customerName}</div>
-                                        <div className="text-xs text-stone-500">{b.serviceName} • {b.startTime}</div>
+                                        <div className="text-xs text-stone-500">
+                                            {b.serviceName} 
+                                            {b.roomNumber && ` (${b.roomNumber})`} • {b.startTime}
+                                        </div>
                                     </div>
                                 ))}
                             </div>

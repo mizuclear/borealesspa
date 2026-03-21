@@ -288,7 +288,10 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
                                         }}
                                     >
                                         <div className="flex items-center justify-between gap-2">
-                                            <span className={`font-bold text-xs truncate ${textClass} ${booking.status === BookingStatus.NO_SHOW ? 'line-through opacity-70' : ''}`}>{booking.serviceName}</span>
+                                            <span className={`font-bold text-xs truncate ${textClass} ${booking.status === BookingStatus.NO_SHOW ? 'line-through opacity-70' : ''}`}>
+                                                {booking.serviceName}
+                                                {booking.roomNumber && <span className="ml-1 text-stone-400 font-normal">({booking.roomNumber})</span>}
+                                            </span>
                                             <div className="flex items-center gap-1">
                                                 {booking.isPaid ? (
                                                     <CheckCircle2 size={10} className="text-emerald-500" title="Réglé" />
