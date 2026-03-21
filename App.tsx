@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, LayoutDashboard, Settings, Plus, Search, Menu, X, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, LayoutDashboard, Settings, Plus, Search, Menu, X, Loader2, ChevronLeft, ChevronRight, LogOut, History } from 'lucide-react';
 import { Space, Booking } from './types';
 import { PlanningGrid } from './components/PlanningGrid';
 import { Dashboard } from './components/Dashboard';
@@ -7,15 +7,20 @@ import { Modal } from './components/Modal';
 import { BookingForm } from './components/BookingForm';
 import { Button } from './components/Button';
 import { SpaceManager } from './components/SpaceManager';
+import { Login } from './components/Login';
+import { Logs } from './components/Logs';
 import { supabase } from './supabaseClient';
+import Cookies from 'js-cookie';
 
 enum View {
   DASHBOARD = 'DASHBOARD',
   CALENDAR = 'CALENDAR',
   SETTINGS = 'SETTINGS',
+  LOGS = 'LOGS',
 }
 
 const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [currentView, setCurrentView] = useState<View>(View.CALENDAR);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   
@@ -31,8 +36,25 @@ const App: React.FC = () => {
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [initialFormState, setInitialFormState] = useState<any>(null);
 
+  // Check Auth on Mount
+  useEffect(() => {
+    const authCookie = Cookies.get('boreales_auth');
+    if (authCookie === 'true') {
+      setIsAuthenticated(true);
+    } else {
+      setIsLoadingData(false); // Stop loading if not authenticated
+    }
+  }, []);
+
+  const handleLogout = () => {
+    Cookies.remove('boreales_auth');
+    setIsAuthenticated(false);
+  };
+
   // Fetch Data from Supabase
   const fetchData = async () => {
+    if (!isAuthenticated) return;
+    
     setIsLoadingData(true);
     try {
         const { data: spacesData, error: spacesError } = await supabase.from('spaces').select('*').order('name');
@@ -81,7 +103,21 @@ const App: React.FC = () => {
 
   useEffect(() => {
       fetchData();
-  }, [selectedDate]);
+  }, [selectedDate, isAuthenticated]);
+
+  // Logging Helper
+  const logAction = async (action: 'CREATE' | 'UPDATE' | 'DELETE', entity_type: 'BOOKING' | 'SPACE', entity_id: string, details: string) => {
+    try {
+      await supabase.from('logs').insert({
+        action,
+        entity_type,
+        entity_id,
+        details
+      });
+    } catch (error) {
+      console.error('Failed to log action:', error);
+    }
+  };
 
   // Handlers
   const handleSlotClick = (spaceId: string, time: string) => {
@@ -124,6 +160,7 @@ const App: React.FC = () => {
           setBookings(prev => prev.filter(b => b.id !== editingBooking.id));
       }
       await supabase.from('bookings').update(dbBooking).eq('id', editingBooking.id);
+      await logAction('UPDATE', 'BOOKING', editingBooking.id, `Réservation modifiée: ${data.customerName} (${data.serviceName})`);
     } else {
       if (isSameDate) {
           setBookings(prev => [...prev, newBooking]);
@@ -131,6 +168,7 @@ const App: React.FC = () => {
       const { data: created, error } = await supabase.from('bookings').insert(dbBooking).select().single();
       if(created && isSameDate) {
           setBookings(prev => prev.map(b => b.id === tempId ? { ...newBooking, id: created.id } : b));
+          await logAction('CREATE', 'BOOKING', created.id, `Nouvelle réservation: ${data.customerName} (${data.serviceName})`);
       }
     }
     
@@ -139,8 +177,12 @@ const App: React.FC = () => {
   };
 
   const handleDeleteBooking = async (id: string) => {
+      const booking = bookings.find(b => b.id === id);
       setBookings(prev => prev.filter(b => b.id !== id));
       await supabase.from('bookings').delete().eq('id', id);
+      if (booking) {
+          await logAction('DELETE', 'BOOKING', id, `Réservation supprimée: ${booking.customerName}`);
+      }
       setIsModalOpen(false);
   };
 
@@ -148,6 +190,7 @@ const App: React.FC = () => {
       const { data, error } = await supabase.from('spaces').insert(space).select().single();
       if (data) {
           setSpaces(prev => [...prev, { ...space, id: data.id }]);
+          await logAction('CREATE', 'SPACE', data.id, `Nouvel espace: ${space.name}`);
       }
   };
 
@@ -158,11 +201,16 @@ const App: React.FC = () => {
           type: space.type,
           capacity: space.capacity
       }).eq('id', space.id);
+      await logAction('UPDATE', 'SPACE', space.id, `Espace modifié: ${space.name}`);
   };
 
   const handleDeleteSpace = async (id: string) => {
+      const space = spaces.find(s => s.id === id);
       setSpaces(prev => prev.filter(s => s.id !== id));
       await supabase.from('spaces').delete().eq('id', id);
+      if (space) {
+          await logAction('DELETE', 'SPACE', id, `Espace supprimé: ${space.name}`);
+      }
   };
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -172,6 +220,10 @@ const App: React.FC = () => {
       date.setDate(date.getDate() + days);
       setSelectedDate(date.toISOString().split('T')[0]);
   };
+
+  if (!isAuthenticated) {
+    return <Login onLogin={() => setIsAuthenticated(true)} />;
+  }
 
   return (
     <div className="flex h-screen bg-stone-50 text-stone-800 font-sans overflow-hidden">
@@ -228,7 +280,25 @@ const App: React.FC = () => {
             <Settings size={20} />
             <span className="font-medium">Paramètres</span>
           </button>
+
+          <button 
+             onClick={() => { setCurrentView(View.LOGS); setIsSidebarOpen(false); }}
+             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${currentView === View.LOGS ? 'bg-brand-900 text-white shadow-lg shadow-brand-900/50' : 'text-stone-400 hover:bg-stone-800 hover:text-white'}`}
+          >
+            <History size={20} />
+            <span className="font-medium">Historique (Logs)</span>
+          </button>
         </nav>
+
+        <div className="p-4 border-t border-stone-800">
+          <button 
+             onClick={handleLogout}
+             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-stone-400 hover:bg-red-500/10 hover:text-red-400"
+          >
+            <LogOut size={20} />
+            <span className="font-medium">Déconnexion</span>
+          </button>
+        </div>
       </aside>
 
       <main className="flex-1 flex flex-col relative overflow-hidden w-full">
@@ -242,8 +312,9 @@ const App: React.FC = () => {
                     {currentView === View.CALENDAR && 'Planning'}
                     {currentView === View.DASHBOARD && 'Vue d\'ensemble'}
                     {currentView === View.SETTINGS && 'Configuration'}
+                    {currentView === View.LOGS && 'Journal d\'activité'}
                 </h2>
-                {currentView !== View.SETTINGS && (
+                {(currentView === View.CALENDAR || currentView === View.DASHBOARD) && (
                     <div className="flex items-center bg-stone-100 rounded-lg p-1">
                         <button onClick={() => changeDate(-1)} className="p-1 hover:bg-white rounded-md text-stone-500 transition-all"><ChevronLeft size={16}/></button>
                         <input 
@@ -302,6 +373,11 @@ const App: React.FC = () => {
                             onUpdateSpace={handleUpdateSpace}
                             onDeleteSpace={handleDeleteSpace}
                         />
+                    </div>
+                )}
+                {currentView === View.LOGS && (
+                    <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
+                        <Logs />
                     </div>
                 )}
             </>

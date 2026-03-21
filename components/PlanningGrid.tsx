@@ -71,7 +71,7 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
   return (
     <div className="flex flex-col h-full bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
       {/* Sticky Header */}
-      <div className="flex border-b border-stone-200 bg-white sticky top-0 z-30 shadow-sm">
+      <div className="flex border-b border-stone-200 bg-white sticky top-0 z-50 shadow-sm">
         <div className="w-48 md:w-64 flex-shrink-0 p-4 font-bold text-stone-800 flex items-center border-r border-stone-200 bg-stone-50/50 backdrop-blur-md">
           <span className="text-lg">Espaces</span>
           <span className="ml-auto text-xs font-normal text-stone-400 bg-white px-2 py-1 rounded-full border border-stone-100">
@@ -95,13 +95,20 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
       </div>
 
       {/* Grid Body */}
-      <div className="flex-1 overflow-y-auto overflow-x-auto hide-scrollbar relative bg-stone-50/30">
+      <div 
+        className="flex-1 overflow-y-auto overflow-x-auto hide-scrollbar relative bg-stone-50/30"
+        onScroll={(e) => {
+            if (scrollRef.current) {
+                scrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
+            }
+        }}
+      >
         <div className="min-w-max relative">
             
             {/* Global Current Time Line (Overlay) */}
             {currentTimePos !== null && (
                 <div 
-                    className="absolute top-0 bottom-0 z-40 border-l-2 border-red-500 pointer-events-none ml-48 md:ml-64"
+                    className="absolute top-0 bottom-0 z-30 border-l-2 border-red-500 pointer-events-none ml-48 md:ml-64"
                     style={{ left: `${currentTimePos}px` }} 
                 >
                     <div className="absolute -top-1.5 -left-[5px] w-2.5 h-2.5 bg-red-500 rounded-full shadow-sm" />
@@ -150,7 +157,7 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
                 return (
                 <div key={space.id} className="flex border-b border-stone-100 group min-h-[7rem] hover:bg-white transition-colors">
                     {/* Space Column */}
-                    <div className="w-48 md:w-64 flex-shrink-0 p-4 border-r border-stone-200 bg-white sticky left-0 z-20 flex flex-col justify-center shadow-[4px_0_10px_-4px_rgba(0,0,0,0.05)]">
+                    <div className="w-48 md:w-64 flex-shrink-0 p-4 border-r border-stone-200 bg-white sticky left-0 z-40 flex flex-col justify-center shadow-[4px_0_10px_-4px_rgba(0,0,0,0.05)]">
                         <div className="flex justify-between items-start mb-1">
                              <span className="font-bold text-stone-700 text-sm truncate pr-2">{space.name}</span>
                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide border ${
@@ -256,10 +263,10 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
                                             width: `${width}px`,
                                             top: `${topPercent}%`,
                                             height: `${heightPercent}%`,
-                                            zIndex: 20 + index
+                                            zIndex: 10 + index
                                         }}
                                         className={`booking-card absolute flex flex-col justify-center px-3 py-1 cursor-pointer transition-all duration-200
-                                            ${bgClass} border border-stone-200 border-l-4 rounded-r-md shadow-sm hover:shadow-md hover:scale-[1.01] hover:z-30
+                                            ${bgClass} border border-stone-200 border-l-4 rounded-r-md shadow-sm hover:shadow-md hover:scale-[1.01] hover:z-20
                                             ${borderClass} overflow-hidden group/card`}
                                         onClick={(e) => {
                                             e.stopPropagation();
@@ -336,13 +343,13 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
       </div>
       
       {/* Legend Footer */}
-      <div className="bg-white border-t border-stone-200 p-2 px-6 flex items-center gap-6 text-[10px] text-stone-500 uppercase tracking-wider font-semibold">
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-brand-900"></div> Confirmé</div>
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-sky-500"></div> Présent</div>
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-zinc-500"></div> No-Show</div>
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-amber-500"></div> En attente</div>
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-red-500"></div> Maintenance</div>
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-stone-100 border border-stone-300"></div> Complet</div>
+      <div className="bg-stone-50 border-t border-stone-200 p-3 px-6 flex flex-wrap items-center justify-center sm:justify-start gap-x-6 gap-y-3 text-[10px] text-stone-600 uppercase tracking-wider font-bold z-20 relative shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)]">
+            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-stone-200 shadow-sm"><div className="w-2.5 h-2.5 rounded-full bg-brand-900 shadow-inner"></div> Confirmé</div>
+            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-stone-200 shadow-sm"><div className="w-2.5 h-2.5 rounded-full bg-sky-500 shadow-inner"></div> Présent</div>
+            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-stone-200 shadow-sm"><div className="w-2.5 h-2.5 rounded-full bg-zinc-500 shadow-inner"></div> No-Show</div>
+            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-stone-200 shadow-sm"><div className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-inner"></div> En attente</div>
+            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-stone-200 shadow-sm"><div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-inner"></div> Maintenance</div>
+            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-stone-200 shadow-sm"><div className="w-2.5 h-2.5 rounded-full bg-stone-100 border border-stone-300"></div> Complet</div>
       </div>
     </div>
   );

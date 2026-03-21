@@ -39,3 +39,12 @@ export interface DailyStats {
   occupancyRate: number;
   totalBookings: number;
 }
+
+export interface Log {
+  id: string;
+  created_at: string;
+  action: 'CREATE' | 'UPDATE' | 'DELETE';
+  entity_type: 'BOOKING' | 'SPACE';
+  entity_id: string;
+  details: string;
+}
