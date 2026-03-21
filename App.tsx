@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, LayoutDashboard, Settings, Plus, Search, Menu, X, Loader2, ChevronLeft, ChevronRight, LogOut, History } from 'lucide-react';
+import { Calendar, LayoutDashboard, Settings, Plus, Search, Menu, X, Loader2, ChevronLeft, ChevronRight, LogOut, History, RefreshCw } from 'lucide-react';
 import { Space, Booking } from './types';
 import { PlanningGrid } from './components/PlanningGrid';
 import { Dashboard } from './components/Dashboard';
@@ -295,7 +295,7 @@ const App: React.FC = () => {
                     className="w-full h-full object-cover"
                   />
               </div>
-              <span className="font-serif font-bold text-xl tracking-tight">Les Boréales</span>
+              <span className="font-display font-bold text-xl tracking-tight">Les Boréales</span>
             </div>
             <button onClick={toggleSidebar} className="md:hidden text-stone-400 hover:text-white">
               <X size={20} />
@@ -361,15 +361,25 @@ const App: React.FC = () => {
                     {currentView === View.LOGS && 'Journal d\'activité'}
                 </h2>
                 {(currentView === View.CALENDAR || currentView === View.DASHBOARD) && (
-                    <div className="flex items-center bg-stone-100 rounded-lg p-1">
-                        <button onClick={() => changeDate(-1)} className="p-1 hover:bg-white rounded-md text-stone-500 transition-all"><ChevronLeft size={16}/></button>
-                        <input 
-                            type="date" 
-                            value={selectedDate} 
-                            onChange={(e) => setSelectedDate(e.target.value)}
-                            className="bg-transparent border-none text-xs md:text-sm font-medium text-stone-700 px-2 outline-none w-28 md:w-auto"
-                        />
-                        <button onClick={() => changeDate(1)} className="p-1 hover:bg-white rounded-md text-stone-500 transition-all"><ChevronRight size={16}/></button>
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center bg-stone-100 rounded-lg p-1">
+                            <button onClick={() => changeDate(-1)} className="p-1 hover:bg-white rounded-md text-stone-500 transition-all"><ChevronLeft size={16}/></button>
+                            <input 
+                                type="date" 
+                                value={selectedDate} 
+                                onChange={(e) => setSelectedDate(e.target.value)}
+                                className="bg-transparent border-none text-xs md:text-sm font-medium text-stone-700 px-2 outline-none w-28 md:w-auto"
+                            />
+                            <button onClick={() => changeDate(1)} className="p-1 hover:bg-white rounded-md text-stone-500 transition-all"><ChevronRight size={16}/></button>
+                        </div>
+                        <button 
+                            onClick={fetchData} 
+                            disabled={isLoadingData}
+                            className="p-2 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-lg transition-all disabled:opacity-50"
+                            title="Actualiser"
+                        >
+                            <RefreshCw size={18} className={isLoadingData ? "animate-spin" : ""} />
+                        </button>
                     </div>
                 )}
             </div>

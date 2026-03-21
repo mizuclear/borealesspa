@@ -35,8 +35,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
               className="w-full h-full object-cover"
             />
           </div>
-          <h1 className="text-2xl font-serif font-bold text-white relative z-10">Les Boréales</h1>
-          <p className="text-brand-200 mt-2 relative z-10 text-sm">Espace de gestion</p>
+          <h1 className="text-2xl font-display font-bold text-white relative z-10">Les Boréales</h1>
+          <p className="text-brand-200 mt-2 relative z-10 text-sm font-medium uppercase tracking-wider">Gestion Spa</p>
         </div>
         
         <div className="p-8">

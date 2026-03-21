@@ -38,11 +38,54 @@ const getStatusColor = (status: BookingStatus) => {
 
 export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, onSlotClick, onBookingClick, highlightedBookingId }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const gridBodyRef = useRef<HTMLDivElement>(null);
   const totalMinutes = (CLOSING_HOUR - OPENING_HOUR) * 60;
   const gridWidth = totalMinutes * PIXELS_PER_MINUTE;
   
   // Current time state
   const [currentTimePos, setCurrentTimePos] = useState<number | null>(null);
+
+  // Drag to scroll state
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragMoved, setDragMoved] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [startY, setStartY] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const [scrollTop, setScrollTop] = useState(0);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!gridBodyRef.current) return;
+    setIsDragging(true);
+    setDragMoved(false);
+    setStartX(e.pageX - gridBodyRef.current.offsetLeft);
+    setStartY(e.pageY - gridBodyRef.current.offsetTop);
+    setScrollLeft(gridBodyRef.current.scrollLeft);
+    setScrollTop(gridBodyRef.current.scrollTop);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !gridBodyRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - gridBodyRef.current.offsetLeft;
+    const y = e.pageY - gridBodyRef.current.offsetTop;
+    const walkX = (x - startX) * 1.5; // Scroll speed multiplier
+    const walkY = (y - startY) * 1.5;
+    
+    if (Math.abs(walkX) > 5 || Math.abs(walkY) > 5) {
+        setDragMoved(true);
+    }
+    
+    gridBodyRef.current.scrollLeft = scrollLeft - walkX;
+    gridBodyRef.current.scrollTop = scrollTop - walkY;
+  };
 
   useEffect(() => {
     if (highlightedBookingId) {
@@ -73,13 +116,64 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
     return () => clearInterval(interval);
   }, []);
 
+  // Scroll to current time on initial load
+  const initialScrollDone = useRef(false);
+  useEffect(() => {
+    if (!highlightedBookingId && !initialScrollDone.current) {
+        // Small delay to ensure DOM is fully rendered and dimensions are available
+        const timer = setTimeout(() => {
+            if (gridBodyRef.current) {
+                const now = new Date();
+                const currentHour = now.getHours();
+                const currentMin = now.getMinutes();
+                
+                if (currentHour >= OPENING_HOUR && currentHour < CLOSING_HOUR) {
+                    const minutesFromStart = ((currentHour - OPENING_HOUR) * 60) + currentMin;
+                    const targetX = minutesFromStart * PIXELS_PER_MINUTE;
+                    const containerWidth = gridBodyRef.current.clientWidth;
+                    gridBodyRef.current.scrollLeft = Math.max(0, targetX - containerWidth / 2);
+                }
+                initialScrollDone.current = true;
+            }
+        }, 100);
+        return () => clearTimeout(timer);
+    }
+  }, [highlightedBookingId]);
+
   const timeMarkers = [];
   for (let h = OPENING_HOUR; h <= CLOSING_HOUR; h++) {
     timeMarkers.push(h);
   }
 
+  const scrollToCurrentTime = () => {
+    if (gridBodyRef.current) {
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMin = now.getMinutes();
+        
+        if (currentHour >= OPENING_HOUR && currentHour < CLOSING_HOUR) {
+            const minutesFromStart = ((currentHour - OPENING_HOUR) * 60) + currentMin;
+            const targetX = minutesFromStart * PIXELS_PER_MINUTE;
+            const containerWidth = gridBodyRef.current.clientWidth;
+            gridBodyRef.current.scrollTo({
+                left: Math.max(0, targetX - containerWidth / 2),
+                behavior: 'smooth'
+            });
+        }
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+    <div className="flex flex-col h-full bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden relative">
+      {/* Floating "Maintenant" Button */}
+      <button 
+        onClick={scrollToCurrentTime}
+        className="absolute bottom-6 right-6 z-50 bg-white border border-stone-200 shadow-lg text-stone-600 hover:text-brand-600 hover:border-brand-200 px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-all hover:shadow-xl hover:-translate-y-0.5"
+      >
+        <Clock size={16} />
+        Maintenant
+      </button>
+
       {/* Sticky Header */}
       <div className="flex border-b border-stone-200 bg-white sticky top-0 z-50 shadow-sm">
         <div className="w-48 md:w-64 flex-shrink-0 p-4 font-bold text-stone-800 flex items-center border-r border-stone-200 bg-stone-50/50 backdrop-blur-md">
@@ -106,12 +200,17 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
 
       {/* Grid Body */}
       <div 
-        className="flex-1 overflow-y-auto overflow-x-auto hide-scrollbar relative bg-stone-50/30"
+        ref={gridBodyRef}
+        className={`flex-1 overflow-y-auto overflow-x-auto hide-scrollbar relative bg-stone-50/30 ${isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
         onScroll={(e) => {
             if (scrollRef.current) {
                 scrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
             }
         }}
+        onMouseDown={handleMouseDown}
+        onMouseLeave={handleMouseLeave}
+        onMouseUp={handleMouseUp}
+        onMouseMove={handleMouseMove}
       >
         <div className="min-w-max relative">
             
@@ -210,19 +309,36 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
 
                 const effectiveCapacity = Math.max(space.capacity, maxLanesUsed);
 
+                const getSpaceImage = (type: string, name: string) => {
+                    const lowerName = name.toLowerCase();
+                    if (type === 'MASSAGE' || lowerName.includes('massage')) return 'https://i.ibb.co/fY93Fmcg/Tabledemassage.png';
+                    if (type === 'POOL' || lowerName.includes('piscine') || lowerName.includes('bassin')) return 'https://i.ibb.co/4RKvrkK1/Piscine.png';
+                    if (type === 'SAUNA' || lowerName.includes('sauna')) return 'https://i.ibb.co/My2DbZDz/Sauna.png';
+                    if (type === 'RELAX' || lowerName.includes('hydro') || lowerName.includes('lit') || lowerName.includes('détente')) return 'https://i.ibb.co/mFJCnsRw/Lit-Hydro.png';
+                    // Default fallback
+                    return 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80';
+                };
+
                 return (
                 <div key={space.id} className="flex border-b border-stone-100 group min-h-[7rem] hover:bg-white transition-colors">
                     {/* Space Column */}
                     <div className="w-48 md:w-64 flex-shrink-0 p-4 border-r border-stone-200 bg-white sticky left-0 z-40 flex flex-col justify-center shadow-[4px_0_10px_-4px_rgba(0,0,0,0.05)]">
-                        <div className="flex justify-between items-start mb-1">
-                             <span className="font-bold text-stone-700 text-sm truncate pr-2">{space.name}</span>
-                             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide border ${
-                                 space.type === 'MASSAGE' ? 'bg-purple-50 text-purple-700 border-purple-100' :
-                                 space.type === 'POOL' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                                 'bg-stone-50 text-stone-600 border-stone-100'
-                             }`}>
-                                 {space.type}
-                             </span>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-stone-100 border border-stone-200">
+                                <img src={getSpaceImage(space.type, space.name)} alt={space.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            </div>
+                            <div className="flex flex-col overflow-hidden">
+                                <span className="font-bold text-stone-700 text-sm truncate pr-2" title={space.name}>{space.name}</span>
+                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide border w-fit mt-1 ${
+                                    space.type === 'MASSAGE' ? 'bg-purple-50 text-purple-700 border-purple-100' :
+                                    space.type === 'POOL' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                                    space.type === 'SAUNA' ? 'bg-orange-50 text-orange-700 border-orange-100' :
+                                    space.type === 'RELAX' ? 'bg-teal-50 text-teal-700 border-teal-100' :
+                                    'bg-stone-50 text-stone-600 border-stone-100'
+                                }`}>
+                                    {space.type}
+                                </span>
+                            </div>
                         </div>
                         <div className="flex items-center text-stone-400 text-xs mt-1">
                             <Users size={12} className="mr-1.5" /> 
@@ -243,6 +359,7 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
                                     className="h-full flex-1 border-r border-transparent hover:bg-brand-50/50 hover:border-brand-200 transition-colors cursor-pointer group/slot flex items-center justify-center"
                                     onClick={(e) => {
                                         e.stopPropagation();
+                                        if (dragMoved) return;
                                         const actualMins = (OPENING_HOUR * 60) + (i * 15);
                                         onSlotClick(space.id, minutesToTime(actualMins));
                                     }}
@@ -329,6 +446,7 @@ export const PlanningGrid: React.FC<PlanningGridProps> = ({ spaces, bookings, on
                                             ${isHighlighted ? 'ring-4 ring-brand-500 shadow-2xl scale-105 animate-pulse' : ''}`}
                                         onClick={(e) => {
                                             e.stopPropagation();
+                                            if (dragMoved) return;
                                             onBookingClick(booking);
                                         }}
                                     >
