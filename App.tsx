@@ -28,6 +28,7 @@ const App: React.FC = () => {
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
@@ -332,7 +333,13 @@ const App: React.FC = () => {
           <div className="flex items-center gap-2 md:gap-4">
             <div className="relative hidden lg:block">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-400" size={18} />
-                <input type="text" placeholder="Rechercher..." className="pl-10 pr-4 py-2 bg-stone-100 rounded-full text-sm border-transparent focus:bg-white focus:ring-2 focus:ring-brand-900 transition-all outline-none w-48 lg:w-64" />
+                <input 
+                  type="text" 
+                  placeholder="Rechercher un client..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-4 py-2 bg-stone-100 rounded-full text-sm border-transparent focus:bg-white focus:ring-2 focus:ring-brand-900 transition-all outline-none w-48 lg:w-64" 
+                />
             </div>
             {currentView === View.CALENDAR && (
                 <Button onClick={() => { setEditingBooking(null); setInitialFormState({date: selectedDate, startTime: '09:00', durationMinutes: 60, pax: 1}); setIsModalOpen(true); }} className="whitespace-nowrap">
@@ -354,7 +361,7 @@ const App: React.FC = () => {
                     <div className="flex-1 p-2 md:p-6 overflow-hidden">
                         <PlanningGrid 
                             spaces={spaces} 
-                            bookings={bookings} 
+                            bookings={bookings.filter(b => b.customerName.toLowerCase().includes(searchQuery.toLowerCase()) || b.serviceName.toLowerCase().includes(searchQuery.toLowerCase()))} 
                             onSlotClick={handleSlotClick} 
                             onBookingClick={handleBookingClick}
                         />
@@ -362,7 +369,7 @@ const App: React.FC = () => {
                 )}
                 {currentView === View.DASHBOARD && (
                     <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
-                        <Dashboard bookings={bookings} />
+                        <Dashboard bookings={bookings.filter(b => b.customerName.toLowerCase().includes(searchQuery.toLowerCase()) || b.serviceName.toLowerCase().includes(searchQuery.toLowerCase()))} />
                     </div>
                 )}
                 {currentView === View.SETTINGS && (
